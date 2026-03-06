@@ -63,17 +63,6 @@ export const revokeRefreshToken = async (userId: string): Promise<void> => {
   }).exec();
 };
 
-export const findByProviderAndId = async (
-  provider: AuthProvider,
-  providerId: string
-): Promise<UserDocument | null> => {
-  return User.findOne({
-    linkedProviders: {
-      $elemMatch: { provider, providerId },
-    },
-  }).exec();
-};
-
 export const findByLinkedProvider = async (
   provider: AuthProvider,
   providerId: string

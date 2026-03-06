@@ -7,7 +7,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   RefreshTokenDto,
-  SocialAuthDto,
+  FirebaseAuthDto,
 } from './auth.validation.js';
 
 export const signup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -60,11 +60,11 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-export const socialAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const firebaseAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const data: SocialAuthDto = req.body;
-    const result = await authService.socialAuth(data);
-    sendSuccess(res, result, 'Social authentication successful');
+    const data: FirebaseAuthDto = req.body;
+    const result = await authService.firebaseAuth(data);
+    sendSuccess(res, result, 'Firebase authentication successful');
   } catch (error) {
     next(error);
   }

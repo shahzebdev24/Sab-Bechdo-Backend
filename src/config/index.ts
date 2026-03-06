@@ -38,6 +38,12 @@ const configSchema = z.object({
     maxRequests: z.coerce.number().default(100),
     authMax: z.coerce.number().default(5),
   }),
+  
+  firebase: z.object({
+    projectId: z.string().min(1, 'Firebase project ID is required'),
+    clientEmail: z.string().email('Firebase client email must be valid'),
+    privateKey: z.string().min(1, 'Firebase private key is required'),
+  }),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -77,6 +83,12 @@ function loadConfig(): Config {
       windowMs: process.env.RATE_LIMIT_WINDOW_MS,
       maxRequests: process.env.RATE_LIMIT_MAX_REQUESTS,
       authMax: process.env.AUTH_RATE_LIMIT_MAX,
+    },
+    
+    firebase: {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     },
   };
 

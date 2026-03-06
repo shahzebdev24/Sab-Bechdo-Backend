@@ -9,7 +9,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   refreshTokenSchema,
-  socialAuthSchema,
+  firebaseAuthSchema,
 } from './auth.validation.js';
 
 const router = Router();
@@ -34,7 +34,7 @@ router.post(
 
 router.post('/refresh-token', validateBody(refreshTokenSchema), authController.refreshToken);
 
-router.post('/social', authLimiter, validateBody(socialAuthSchema), authController.socialAuth);
+router.post('/firebase', authLimiter, validateBody(firebaseAuthSchema), authController.firebaseAuth);
 
 router.get('/profile', authenticate, authController.getProfile);
 
