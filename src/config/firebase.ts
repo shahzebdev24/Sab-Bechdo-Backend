@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
-import config from './index.js';
-import logger from './logger.js';
+import { config } from './index.js';
+import { logger } from './logger.js';
 
 let firebaseInitialized = false;
 
@@ -21,8 +21,8 @@ export const initializeFirebase = (): void => {
 
     firebaseInitialized = true;
     logger.info('Firebase Admin SDK initialized successfully');
-  } catch (error) {
-    logger.error('Failed to initialize Firebase Admin SDK:', error);
+  } catch (error: any) {
+    logger.error({ error: error.message, stack: error.stack }, 'Failed to initialize Firebase Admin SDK');
     throw error;
   }
 };
