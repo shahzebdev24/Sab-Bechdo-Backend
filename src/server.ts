@@ -2,11 +2,15 @@ import { createApp } from './app.js';
 import { config } from '@config/index.js';
 import { logger } from '@config/logger.js';
 import { connectDatabase, disconnectDatabase } from '@config/database.js';
+import { initializeFirebase } from '@config/firebase.js';
 
 const startServer = async () => {
   try {
     // Connect to database
     await connectDatabase();
+
+    // Initialize Firebase Admin SDK
+    initializeFirebase();
 
     // Create Express app
     const app = createApp();

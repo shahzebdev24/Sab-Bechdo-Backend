@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { AUTH_PROVIDERS, AuthProvider } from '@common/constants.js';
+import { AUTH_PROVIDERS, AuthProvider, USER_ROLES, UserRole } from '@common/constants.js';
 
 export interface LinkedProvider {
   provider: AuthProvider;
@@ -11,6 +11,7 @@ export interface IUser {
   email: string;
   name: string;
   password?: string;
+  role: UserRole;
   linkedProviders: LinkedProvider[]; // All linked authentication methods
   resetToken?: string;
   resetTokenExpiry?: Date;
@@ -61,6 +62,12 @@ const userSchema = new Schema<UserDocument>(
     password: {
       type: String,
       select: false, // Don't include password by default in queries
+    },
+    role: {
+      type: String,
+      enum: Object.values(USER_ROLES),
+      default: USER_ROLES.CUSTOMER,
+      required: true,
     },
     linkedProviders: {
       type: [linkedProviderSchema],

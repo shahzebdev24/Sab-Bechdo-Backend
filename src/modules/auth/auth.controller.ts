@@ -7,7 +7,8 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   RefreshTokenDto,
-  SocialAuthDto,
+  FirebaseAuthDto,
+  ChangePasswordDto,
 } from './auth.validation.js';
 
 export const signup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -60,11 +61,11 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-export const socialAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const firebaseAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const data: SocialAuthDto = req.body;
-    const result = await authService.socialAuth(data);
-    sendSuccess(res, result, 'Social authentication successful');
+    const data: FirebaseAuthDto = req.body;
+    const result = await authService.firebaseAuth(data);
+    sendSuccess(res, result, 'Firebase authentication successful');
   } catch (error) {
     next(error);
   }
@@ -85,6 +86,17 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
     const userId = req.user!.userId;
     await authService.logout(userId);
     sendSuccess(res, null, 'Logged out successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const data: ChangePasswordDto = req.body;
+    await authService.changePassword(userId, data);
+    sendSuccess(res, null, 'Password changed successfully');
   } catch (error) {
     next(error);
   }

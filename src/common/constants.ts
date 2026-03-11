@@ -33,4 +33,10 @@ export const AUTH_PROVIDERS = {
   APPLE: 'apple',
 } as const;
 
+export const USER_ROLES = {
+  CUSTOMER: 'customer',
+  ADMIN: 'admin',
+} as const;
+
 export type AuthProvider = (typeof AUTH_PROVIDERS)[keyof typeof AUTH_PROVIDERS];
+export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];

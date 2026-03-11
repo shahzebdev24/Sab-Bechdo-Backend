@@ -34,11 +34,18 @@ export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
-export const socialAuthSchema = z.object({
-  provider: z.enum(['google', 'facebook', 'apple']),
-  token: z.string().min(1, 'Social auth token is required'),
-  name: z.string().optional(),
-  email: z.string().email().optional(),
+export const firebaseAuthSchema = z.object({
+  token: z.string().min(1, 'Firebase ID token is required'),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
 });
 
 export type SignupDto = z.infer<typeof signupSchema>;
@@ -46,4 +53,5 @@ export type LoginDto = z.infer<typeof loginSchema>;
 export type ForgotPasswordDto = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;
 export type RefreshTokenDto = z.infer<typeof refreshTokenSchema>;
-export type SocialAuthDto = z.infer<typeof socialAuthSchema>;
+export type FirebaseAuthDto = z.infer<typeof firebaseAuthSchema>;
+export type ChangePasswordDto = z.infer<typeof changePasswordSchema>;

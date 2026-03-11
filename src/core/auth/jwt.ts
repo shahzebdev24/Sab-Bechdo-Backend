@@ -3,10 +3,11 @@ import { config } from '@config/index.js';
 import { JwtPayload, AuthTokens } from '@core/types/index.js';
 import { AuthError } from '@core/errors/app-error.js';
 
-export const generateAccessToken = (userId: string, email: string): string => {
+export const generateAccessToken = (userId: string, email: string, role?: string): string => {
   const payload: JwtPayload = {
     userId,
     email,
+    role,
     type: 'access',
   };
   
@@ -15,10 +16,11 @@ export const generateAccessToken = (userId: string, email: string): string => {
   });
 };
 
-export const generateRefreshToken = (userId: string, email: string): string => {
+export const generateRefreshToken = (userId: string, email: string, role?: string): string => {
   const payload: JwtPayload = {
     userId,
     email,
+    role,
     type: 'refresh',
   };
   
@@ -27,10 +29,10 @@ export const generateRefreshToken = (userId: string, email: string): string => {
   });
 };
 
-export const generateAuthTokens = (userId: string, email: string): AuthTokens => {
+export const generateAuthTokens = (userId: string, email: string, role?: string): AuthTokens => {
   return {
-    accessToken: generateAccessToken(userId, email),
-    refreshToken: generateRefreshToken(userId, email),
+    accessToken: generateAccessToken(userId, email, role),
+    refreshToken: generateRefreshToken(userId, email, role),
   };
 };
 

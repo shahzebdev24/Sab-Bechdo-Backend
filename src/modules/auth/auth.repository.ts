@@ -8,7 +8,7 @@ export const findByEmail = async (email: string): Promise<UserDocument | null> =
 };
 
 export const findById = async (id: string): Promise<UserDocument | null> => {
-  return User.findById(id).exec();
+  return User.findById(id).select('+password').exec();
 };
 
 export const create = async (data: CreateUserInput): Promise<UserDocument> => {
@@ -60,17 +60,6 @@ export const findByRefreshToken = async (refreshToken: string): Promise<UserDocu
 export const revokeRefreshToken = async (userId: string): Promise<void> => {
   await User.findByIdAndUpdate(userId, {
     $unset: { refreshToken: 1 },
-  }).exec();
-};
-
-export const findByProviderAndId = async (
-  provider: AuthProvider,
-  providerId: string
-): Promise<UserDocument | null> => {
-  return User.findOne({
-    linkedProviders: {
-      $elemMatch: { provider, providerId },
-    },
   }).exec();
 };
 

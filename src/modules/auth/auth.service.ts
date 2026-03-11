@@ -4,7 +4,8 @@ import {
   LoginDto,
   ForgotPasswordDto,
   ResetPasswordDto,
-  SocialAuthDto,
+  FirebaseAuthDto,
+  ChangePasswordDto,
 } from './auth.validation.js';
 import { hashPassword, comparePassword } from '@core/auth/password.js';
 import { generateAuthTokens, verifyRefreshToken } from '@core/auth/jwt.js';
@@ -15,6 +16,7 @@ import { sendPasswordResetEmail } from '@common/services/email.service.js';
 import { AUTH_CONSTANTS, AUTH_PROVIDERS } from '@common/constants.js';
 import { generateRandomToken } from '@common/utils.js';
 import { UserMapper } from '@common/mappers/user.mapper.js';
+import { getFirebaseAuth } from '@config/firebase.js';
 
 const mapToUserResponse = (user: UserDocument): UserResponse => {
   return UserMapper.toResponse(user);
@@ -45,7 +47,7 @@ export const signup = async (data: SignupDto): Promise<{ user: UserResponse; tok
       throw new AuthError('Failed to link local provider');
     }
     
-    const tokens = generateAuthTokens(updatedUser._id.toString(), updatedUser.email);
+    const tokens = generateAuthTokens(updatedUser._id.toString(), updatedUser.email, updatedUser.role);
     await authRepository.saveRefreshToken(updatedUser._id.toString(), tokens.refreshToken);
     
     return {
@@ -66,7 +68,7 @@ export const signup = async (data: SignupDto): Promise<{ user: UserResponse; tok
   // Link local provider
   await authRepository.linkProvider(user._id.toString(), AUTH_PROVIDERS.LOCAL, null);
 
-  const tokens = generateAuthTokens(user._id.toString(), user.email);
+  const tokens = generateAuthTokens(user._id.toString(), user.email, user.role);
   
   await authRepository.saveRefreshToken(user._id.toString(), tokens.refreshToken);
 
@@ -87,7 +89,7 @@ export const login = async (data: LoginDto): Promise<{ user: UserResponse; token
     throw new AuthError('Invalid email or password');
   }
 
-  const tokens = generateAuthTokens(user._id.toString(), user.email);
+  const tokens = generateAuthTokens(user._id.toString(), user.email, user.role);
   
   await authRepository.saveRefreshToken(user._id.toString(), tokens.refreshToken);
 
@@ -134,141 +136,92 @@ export const refreshToken = async (refreshToken: string): Promise<AuthTokens> =>
     throw new AuthError('Token user mismatch');
   }
 
-  const newTokens = generateAuthTokens(user._id.toString(), user.email);
+  const newTokens = generateAuthTokens(user._id.toString(), user.email, user.role);
 
   await authRepository.saveRefreshToken(user._id.toString(), newTokens.refreshToken);
 
   return newTokens;
 };
 
-interface GoogleUserInfo {
-  id: string;
-  email: string;
-  verified_email: boolean;
-  name: string;
-  given_name: string;
-  family_name: string;
-  picture: string;
-}
+export const firebaseAuth = async (
+  data: FirebaseAuthDto
+): Promise<{ user: UserResponse; tokens: AuthTokens }> => {
+  try {
+    const firebaseAuth = getFirebaseAuth();
 
-interface FacebookUserInfo {
-  id: string;
-  name: string;
-  email?: string;
-}
+    // Verify Firebase ID token
+    const decodedToken = await firebaseAuth.verifyIdToken(data.token);
 
-export const socialAuth = async (data: SocialAuthDto): Promise<{ user: UserResponse; tokens: AuthTokens }> => {
-  let userData: { email: string; name: string; id: string; emailVerified: boolean };
+    const { uid, email, name, firebase } = decodedToken;
 
-  // Verify token with provider
-  if (data.provider === 'google') {
-    try {
-      const response = await fetch(
-        `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${data.token}`
-      );
-      
-      if (!response.ok) {
-        throw new AuthError('Invalid Google token');
-      }
-      
-      const googleData = await response.json() as GoogleUserInfo;
-      userData = {
-        email: googleData.email,
-        name: googleData.name || googleData.given_name || 'User',
-        id: googleData.id,
-        emailVerified: googleData.verified_email,
-      };
-    } catch (error) {
-      throw new AuthError('Failed to verify Google token');
+    if (!email) {
+      throw new AuthError('Email not provided by Firebase authentication');
     }
-  } else if (data.provider === 'facebook') {
-    try {
-      const response = await fetch(
-        `https://graph.facebook.com/me?fields=id,name,email&access_token=${data.token}`
-      );
-      
-      if (!response.ok) {
-        throw new AuthError('Invalid Facebook token');
-      }
-      
-      const fbData = await response.json() as FacebookUserInfo;
-      userData = {
-        email: fbData.email || `${fbData.id}@facebook.com`,
-        name: fbData.name || 'User',
-        id: fbData.id,
-        emailVerified: !!fbData.email, // Facebook only returns email if verified
-      };
-    } catch (error) {
-      throw new AuthError('Failed to verify Facebook token');
+
+    // Determine provider from Firebase sign-in method
+    const signInProvider = firebase?.sign_in_provider || 'password';
+    let authProvider: typeof AUTH_PROVIDERS[keyof typeof AUTH_PROVIDERS] = AUTH_PROVIDERS.LOCAL;
+
+    if (signInProvider === 'google.com') {
+      authProvider = AUTH_PROVIDERS.GOOGLE;
+    } else if (signInProvider === 'facebook.com') {
+      authProvider = AUTH_PROVIDERS.FACEBOOK;
+    } else if (signInProvider === 'apple.com') {
+      authProvider = AUTH_PROVIDERS.APPLE;
     }
-  } else if (data.provider === 'apple') {
-    // Apple token verification is more complex, requires JWT verification
-    // For now, accept the data from client (should implement proper verification)
-    userData = {
-      email: data.email || `apple_user@apple.com`,
-      name: data.name || 'User',
-      id: `apple_${Date.now()}`,
-      emailVerified: true, // Apple verifies emails
-    };
-  } else {
-    throw new AuthError('Unsupported provider');
-  }
 
-  // Try to find user by this specific provider and ID
-  let user = await authRepository.findByLinkedProvider(data.provider, userData.id);
+    // Try to find user by Firebase UID and provider
+    let user = await authRepository.findByLinkedProvider(authProvider, uid);
 
-  if (!user) {
-    // Check if user exists with this email (account linking scenario)
-    const existingUser = await authRepository.findByEmail(userData.email);
-    
-    if (existingUser) {
-      // Account linking: Link new provider to existing account
-      // Only link if email is verified by OAuth provider (security requirement)
-      if (!userData.emailVerified) {
-        throw new AuthError('Email not verified by provider. Cannot link accounts.');
-      }
+    if (!user) {
+      // Check if user exists with this email (account linking scenario)
+      const existingUser = await authRepository.findByEmail(email);
 
-      // Check if this provider is already linked
-      const isAlreadyLinked = await authRepository.isProviderLinked(
-        existingUser._id.toString(),
-        data.provider
-      );
-
-      if (isAlreadyLinked) {
-        // Provider already linked, just login
-        user = existingUser;
-      } else {
-        // Link new provider to existing account (keep existing name)
-        user = await authRepository.linkProvider(
+      if (existingUser) {
+        // Account linking: Link new provider to existing account
+        const isAlreadyLinked = await authRepository.isProviderLinked(
           existingUser._id.toString(),
-          data.provider,
-          userData.id
+          authProvider
         );
-        
-        if (!user) {
-          throw new AuthError('Failed to link provider');
+
+        if (isAlreadyLinked) {
+          // Provider already linked, just login
+          user = existingUser;
+        } else {
+          // Link new provider to existing account (keep existing name)
+          user = await authRepository.linkProvider(existingUser._id.toString(), authProvider, uid);
+
+          if (!user) {
+            throw new AuthError('Failed to link provider');
+          }
         }
+      } else {
+        // New user: Create account with this provider
+        user = await authRepository.create({
+          email,
+          name: name || 'User',
+        });
+
+        // Link the provider
+        await authRepository.linkProvider(user._id.toString(), authProvider, uid);
       }
-    } else {
-      // New user: Create account with this provider
-      user = await authRepository.create({
-        email: userData.email,
-        name: userData.name,
-      });
-
-      // Link the provider
-      await authRepository.linkProvider(user._id.toString(), data.provider, userData.id);
     }
+
+    // Generate JWT tokens
+    const tokens = generateAuthTokens(user._id.toString(), user.email, user.role);
+
+    await authRepository.saveRefreshToken(user._id.toString(), tokens.refreshToken);
+
+    return {
+      user: mapToUserResponse(user),
+      tokens,
+    };
+  } catch (error) {
+    if (error instanceof AuthError) {
+      throw error;
+    }
+    throw new AuthError('Invalid or expired Firebase token');
   }
-
-  const tokens = generateAuthTokens(user._id.toString(), user.email);
-  
-  await authRepository.saveRefreshToken(user._id.toString(), tokens.refreshToken);
-
-  return {
-    user: mapToUserResponse(user),
-    tokens,
-  };
 };
 
 export const getProfile = async (userId: string): Promise<UserResponse> => {
@@ -281,5 +234,37 @@ export const getProfile = async (userId: string): Promise<UserResponse> => {
 };
 
 export const logout = async (userId: string): Promise<void> => {
+  await authRepository.revokeRefreshToken(userId);
+};
+
+export const changePassword = async (userId: string, data: ChangePasswordDto): Promise<void> => {
+  const user = await authRepository.findById(userId);
+  
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+
+  // Check if user has a password (might be social-only account)
+  if (!user.password) {
+    throw new AuthError('Cannot change password for social login accounts. Please set a password first through signup.');
+  }
+
+  // Verify current password
+  const isCurrentPasswordValid = await comparePassword(data.currentPassword, user.password);
+  if (!isCurrentPasswordValid) {
+    throw new AuthError('Current password is incorrect');
+  }
+
+  // Check if new password is same as current
+  const isSamePassword = await comparePassword(data.newPassword, user.password);
+  if (isSamePassword) {
+    throw new AuthError('New password must be different from current password');
+  }
+
+  // Hash and update new password
+  const hashedPassword = await hashPassword(data.newPassword);
+  await authRepository.updatePassword(userId, hashedPassword);
+
+  // Revoke all refresh tokens for security (force re-login on all devices)
   await authRepository.revokeRefreshToken(userId);
 };
