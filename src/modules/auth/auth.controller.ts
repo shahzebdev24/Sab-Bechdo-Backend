@@ -8,6 +8,7 @@ import {
   ResetPasswordDto,
   RefreshTokenDto,
   FirebaseAuthDto,
+  ChangePasswordDto,
 } from './auth.validation.js';
 
 export const signup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -85,6 +86,17 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
     const userId = req.user!.userId;
     await authService.logout(userId);
     sendSuccess(res, null, 'Logged out successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const data: ChangePasswordDto = req.body;
+    await authService.changePassword(userId, data);
+    sendSuccess(res, null, 'Password changed successfully');
   } catch (error) {
     next(error);
   }

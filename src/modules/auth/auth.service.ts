@@ -5,6 +5,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   FirebaseAuthDto,
+  ChangePasswordDto,
 } from './auth.validation.js';
 import { hashPassword, comparePassword } from '@core/auth/password.js';
 import { generateAuthTokens, verifyRefreshToken } from '@core/auth/jwt.js';
@@ -233,5 +234,37 @@ export const getProfile = async (userId: string): Promise<UserResponse> => {
 };
 
 export const logout = async (userId: string): Promise<void> => {
+  await authRepository.revokeRefreshToken(userId);
+};
+
+export const changePassword = async (userId: string, data: ChangePasswordDto): Promise<void> => {
+  const user = await authRepository.findById(userId);
+  
+  if (!user) {
+    throw new NotFoundError('User not found');
+  }
+
+  // Check if user has a password (might be social-only account)
+  if (!user.password) {
+    throw new AuthError('Cannot change password for social login accounts. Please set a password first through signup.');
+  }
+
+  // Verify current password
+  const isCurrentPasswordValid = await comparePassword(data.currentPassword, user.password);
+  if (!isCurrentPasswordValid) {
+    throw new AuthError('Current password is incorrect');
+  }
+
+  // Check if new password is same as current
+  const isSamePassword = await comparePassword(data.newPassword, user.password);
+  if (isSamePassword) {
+    throw new AuthError('New password must be different from current password');
+  }
+
+  // Hash and update new password
+  const hashedPassword = await hashPassword(data.newPassword);
+  await authRepository.updatePassword(userId, hashedPassword);
+
+  // Revoke all refresh tokens for security (force re-login on all devices)
   await authRepository.revokeRefreshToken(userId);
 };

@@ -10,6 +10,7 @@ import {
   resetPasswordSchema,
   refreshTokenSchema,
   firebaseAuthSchema,
+  changePasswordSchema,
 } from './auth.validation.js';
 
 const router = Router();
@@ -39,5 +40,13 @@ router.post('/firebase', authLimiter, validateBody(firebaseAuthSchema), authCont
 router.get('/profile', authenticate, authController.getProfile);
 
 router.post('/logout', authenticate, authController.logout);
+
+router.post(
+  '/change-password',
+  authenticate,
+  authLimiter,
+  validateBody(changePasswordSchema),
+  authController.changePassword
+);
 
 export default router;
