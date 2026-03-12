@@ -3,6 +3,8 @@ import { config } from '@config/index.js';
 import { logger } from '@config/logger.js';
 import { connectDatabase, disconnectDatabase } from '@config/database.js';
 import { initializeFirebase } from '@config/firebase.js';
+import { createServer } from 'http';
+import { initializeSocketIO } from './realtime/socket.js';
 
 const startServer = async () => {
   try {
@@ -15,15 +17,22 @@ const startServer = async () => {
     // Create Express app
     const app = createApp();
 
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Initialize Socket.IO
+    const io = initializeSocketIO(httpServer);
+    logger.info('Socket.IO initialized');
+
     // Start server
-    const server = app.listen(config.port, () => {
+    const server = httpServer.listen(config.port, () => {
       logger.info(
         {
           port: config.port,
           env: config.nodeEnv,
           apiVersion: config.apiVersion,
         },
-        'Server started successfully'
+        'Server started successfully with Socket.IO'
       );
     });
 
@@ -40,6 +49,11 @@ const startServer = async () => {
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       logger.info({ signal }, 'Received shutdown signal');
+
+      // Close Socket.IO connections
+      io.close(() => {
+        logger.info('Socket.IO closed');
+      });
 
       server.close(async () => {
         logger.info('Server closed');

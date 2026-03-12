@@ -54,3 +54,9 @@ export class RateLimitError extends AppError {
     super(message, 429, 'RATE_LIMIT_ERROR');
   }
 }
+
+export class BadRequestError extends AppError {
+  constructor(message: string = 'Bad request') {
+    super(message, 400, 'BAD_REQUEST_ERROR');
+  }
+}

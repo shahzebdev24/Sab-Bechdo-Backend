@@ -29,8 +29,8 @@ export const createApp = (): Application => {
   // Request logging
   app.use(requestLogger);
 
-  // Rate limiting
-  app.use(generalLimiter);
+  // Rate limiting - COMMENTED OUT FOR TESTING
+  // app.use(generalLimiter);
 
   // API routes
   app.use(`/api/${config.apiVersion}`, routes);

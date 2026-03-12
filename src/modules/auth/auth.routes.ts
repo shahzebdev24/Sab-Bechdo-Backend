@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as authController from './auth.controller.js';
 import { validateBody } from '@middleware/validation.js';
 import { authenticate } from '@middleware/auth.js';
-import { authLimiter } from '@middleware/rate-limit.js';
+// import { authLimiter } from '@middleware/rate-limit.js'; // COMMENTED OUT FOR TESTING
 import {
   signupSchema,
   loginSchema,
@@ -15,27 +15,27 @@ import {
 
 const router = Router();
 
-router.post('/signup', authLimiter, validateBody(signupSchema), authController.signup);
+router.post('/signup', /* authLimiter, */ validateBody(signupSchema), authController.signup);
 
-router.post('/login', authLimiter, validateBody(loginSchema), authController.login);
+router.post('/login', /* authLimiter, */ validateBody(loginSchema), authController.login);
 
 router.post(
   '/forgot-password',
-  authLimiter,
+  /* authLimiter, */
   validateBody(forgotPasswordSchema),
   authController.forgotPassword
 );
 
 router.post(
   '/reset-password',
-  authLimiter,
+  /* authLimiter, */
   validateBody(resetPasswordSchema),
   authController.resetPassword
 );
 
 router.post('/refresh-token', validateBody(refreshTokenSchema), authController.refreshToken);
 
-router.post('/firebase', authLimiter, validateBody(firebaseAuthSchema), authController.firebaseAuth);
+router.post('/firebase', /* authLimiter, */ validateBody(firebaseAuthSchema), authController.firebaseAuth);
 
 router.get('/profile', authenticate, authController.getProfile);
 
@@ -44,7 +44,7 @@ router.post('/logout', authenticate, authController.logout);
 router.post(
   '/change-password',
   authenticate,
-  authLimiter,
+  /* authLimiter, */
   validateBody(changePasswordSchema),
   authController.changePassword
 );

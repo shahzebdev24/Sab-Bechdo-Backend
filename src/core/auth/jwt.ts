@@ -13,7 +13,7 @@ export const generateAccessToken = (userId: string, email: string, role?: string
   
   return jwt.sign(payload, config.jwt.secret, {
     expiresIn: config.jwt.accessExpiry,
-  });
+  } as jwt.SignOptions);
 };
 
 export const generateRefreshToken = (userId: string, email: string, role?: string): string => {
@@ -26,7 +26,7 @@ export const generateRefreshToken = (userId: string, email: string, role?: strin
   
   return jwt.sign(payload, config.jwt.refreshSecret, {
     expiresIn: config.jwt.refreshExpiry,
-  });
+  } as jwt.SignOptions);
 };
 
 export const generateAuthTokens = (userId: string, email: string, role?: string): AuthTokens => {

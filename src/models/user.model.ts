@@ -7,6 +7,14 @@ export interface LinkedProvider {
   linkedAt: Date;
 }
 
+export interface UserLocation {
+  city?: string;
+  region?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface IUser {
   email: string;
   name: string;
@@ -18,6 +26,24 @@ export interface IUser {
   refreshToken?: string; // Store current active refresh token
   isEmailVerified: boolean;
   isActive: boolean;
+  // Profile fields
+  avatarUrl?: string;
+  username?: string;
+  phone?: string;
+  location?: UserLocation;
+  wishlist: mongoose.Types.ObjectId[]; // Array of Ad IDs
+  // Preferences
+  preferences: {
+    notifications: {
+      chat: boolean;
+      likes: boolean;
+      comments: boolean;
+      follows: boolean;
+      system: boolean;
+    };
+    theme: 'light' | 'dark' | 'system';
+    language: string;
+  };
 }
 
 export interface UserDocument extends IUser, Document {
@@ -39,6 +65,30 @@ const linkedProviderSchema = new Schema<LinkedProvider>(
     linkedAt: {
       type: Date,
       default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
+const userLocationSchema = new Schema<UserLocation>(
+  {
+    city: {
+      type: String,
+      trim: true,
+    },
+    region: {
+      type: String,
+      trim: true,
+    },
+    country: {
+      type: String,
+      trim: true,
+    },
+    latitude: {
+      type: Number,
+    },
+    longitude: {
+      type: Number,
     },
   },
   { _id: false }
@@ -79,7 +129,7 @@ const userSchema = new Schema<UserDocument>(
       select: false,
     },
     resetTokenExpiry: {
-      type: String,
+      type: Date,
       select: false,
     },
     refreshToken: {
@@ -93,6 +143,54 @@ const userSchema = new Schema<UserDocument>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    avatarUrl: {
+      type: String,
+      default: null,
+    },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      lowercase: true,
+    },
+    phone: {
+      type: String,
+      trim: true,
+    },
+    location: {
+      type: userLocationSchema,
+      default: null,
+    },
+    wishlist: {
+      type: [Schema.Types.ObjectId],
+      ref: 'Ad',
+      default: [],
+    },
+    preferences: {
+      type: {
+        notifications: {
+          type: {
+            chat: { type: Boolean, default: true },
+            likes: { type: Boolean, default: true },
+            comments: { type: Boolean, default: true },
+            follows: { type: Boolean, default: true },
+            system: { type: Boolean, default: true },
+          },
+          default: {},
+        },
+        theme: {
+          type: String,
+          enum: ['light', 'dark', 'system'],
+          default: 'system',
+        },
+        language: {
+          type: String,
+          default: 'en',
+        },
+      },
+      default: {},
     },
   },
   {

@@ -44,6 +44,12 @@ const configSchema = z.object({
     clientEmail: z.string().email('Firebase client email must be valid'),
     privateKey: z.string().min(1, 'Firebase private key is required'),
   }),
+  
+  cloudinary: z.object({
+    cloudName: z.string().min(1, 'Cloudinary cloud name is required'),
+    apiKey: z.string().min(1, 'Cloudinary API key is required'),
+    apiSecret: z.string().min(1, 'Cloudinary API secret is required'),
+  }),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -89,6 +95,12 @@ function loadConfig(): Config {
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    },
+    
+    cloudinary: {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      apiSecret: process.env.CLOUDINARY_API_SECRET,
     },
   };
 

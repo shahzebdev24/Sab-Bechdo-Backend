@@ -12,8 +12,16 @@ export class UserMapper {
       id: user._id.toString(),
       email: user.email,
       name: user.name,
+      role: user.role,
+      avatarUrl: user.avatarUrl,
+      username: user.username,
+      phone: user.phone,
+      location: user.location,
       linkedProviders: linkedProviders.length > 0 ? linkedProviders : undefined,
+      isEmailVerified: user.isEmailVerified,
+      isActive: user.isActive,
       createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 
