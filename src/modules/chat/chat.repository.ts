@@ -6,13 +6,13 @@ import mongoose from 'mongoose';
 export const createConversation = async (
   buyerId: string,
   sellerId: string,
-  adId?: string
+  adId: string
 ): Promise<ConversationDocument> => {
   const conversation = new Conversation({
     participants: [new mongoose.Types.ObjectId(buyerId), new mongoose.Types.ObjectId(sellerId)],
     buyer: new mongoose.Types.ObjectId(buyerId),
     seller: new mongoose.Types.ObjectId(sellerId),
-    ad: adId ? new mongoose.Types.ObjectId(adId) : null,
+    ad: new mongoose.Types.ObjectId(adId),
     unreadCounts: new Map([
       [buyerId, 0],
       [sellerId, 0],
@@ -24,30 +24,23 @@ export const createConversation = async (
 export const findConversation = async (
   buyerId: string,
   sellerId: string,
-  adId?: string
+  adId: string
 ): Promise<ConversationDocument | null> => {
-  const filter: Record<string, unknown> = {
+  return await Conversation.findOne({
     buyer: new mongoose.Types.ObjectId(buyerId),
     seller: new mongoose.Types.ObjectId(sellerId),
-  };
-
-  if (adId) {
-    filter.ad = new mongoose.Types.ObjectId(adId);
-  } else {
-    filter.ad = null;
-  }
-
-  return await Conversation.findOne(filter)
+    ad: new mongoose.Types.ObjectId(adId),
+  })
     .populate('buyer', 'name avatarUrl username')
     .populate('seller', 'name avatarUrl username')
-    .populate('ad', 'title photoUrls price');
+    .populate('ad', 'title photoUrls price status currency condition');
 };
 
 export const findConversationById = async (id: string): Promise<ConversationDocument | null> => {
   return await Conversation.findById(id)
     .populate('buyer', 'name avatarUrl username')
     .populate('seller', 'name avatarUrl username')
-    .populate('ad', 'title photoUrls price');
+    .populate('ad', 'title photoUrls price status currency condition');
 };
 
 export const listUserConversations = async (
@@ -64,7 +57,7 @@ export const listUserConversations = async (
       .limit(limit)
       .populate('buyer', 'name avatarUrl username')
       .populate('seller', 'name avatarUrl username')
-      .populate('ad', 'title photoUrls price'),
+      .populate('ad', 'title photoUrls price status currency condition'),
     Conversation.countDocuments({ participants: new mongoose.Types.ObjectId(userId) }),
   ]);
 
@@ -110,6 +103,7 @@ export const createMessage = async (
     sender: new mongoose.Types.ObjectId(senderId),
     receiver: new mongoose.Types.ObjectId(receiverId),
     body,
+    deliveredAt: new Date(), // Mark as delivered immediately
   });
   return await message.save();
 };
@@ -123,7 +117,7 @@ export const listMessages = async (
 
   const [messages, total] = await Promise.all([
     Message.find({ conversation: new mongoose.Types.ObjectId(conversationId) })
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 }) // Descending: newest first
       .skip(skip)
       .limit(limit)
       .populate('sender', 'name avatarUrl username')
@@ -131,7 +125,11 @@ export const listMessages = async (
     Message.countDocuments({ conversation: new mongoose.Types.ObjectId(conversationId) }),
   ]);
 
-  return { messages: messages.reverse(), total };
+  // Return as is - newest first
+  // Page 1: Latest 20 messages
+  // Page 2: Next older 20 messages
+  // Page 3: Even older 20 messages
+  return { messages, total };
 };
 
 export const markMessagesAsRead = async (

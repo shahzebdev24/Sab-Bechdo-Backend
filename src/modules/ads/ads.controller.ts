@@ -141,3 +141,61 @@ export const listMyAds = async (
     next(error);
   }
 };
+
+/**
+ * Admin: List all ads (including pending and rejected)
+ */
+export const listAllAdsAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const query: ListAdsQueryDto = req.query as unknown as ListAdsQueryDto;
+    const result = await adsService.listAllAdsAdmin(query);
+    sendSuccess(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin: Approve ad
+ */
+export const approveAd = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (typeof id !== 'string') {
+      throw new BadRequestError('Invalid ad ID');
+    }
+    const ad = await adsService.approveAd(id);
+    sendSuccess(res, ad, 'Ad approved successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Admin: Reject ad
+ */
+export const rejectAd = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (typeof id !== 'string') {
+      throw new BadRequestError('Invalid ad ID');
+    }
+    const { reason } = req.body;
+    const ad = await adsService.rejectAd(id, reason);
+    sendSuccess(res, ad, 'Ad rejected successfully');
+  } catch (error) {
+    next(error);
+  }
+};

@@ -49,3 +49,7 @@ export const isInWishlist = async (userId: string, adId: string): Promise<boolea
   }
   return user.wishlist.some((id) => id.toString() === adId);
 };
+
+export const findWishlistItem = async (userId: string, adId: string): Promise<boolean> => {
+  return await isInWishlist(userId, adId);
+};

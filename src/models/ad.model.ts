@@ -34,6 +34,9 @@ export interface IAd {
   likesCount: number;
   commentsCount: number;
   isDeleted: boolean;
+  rejectionReason?: string;
+  resubmittedAt?: Date;
+  previousStatus?: AdStatus;
 }
 
 export interface AdDocument extends IAd, Document {
@@ -122,7 +125,7 @@ const adSchema = new Schema<AdDocument>(
     status: {
       type: String,
       enum: Object.values(AD_STATUS),
-      default: AD_STATUS.ACTIVE,
+      default: AD_STATUS.PENDING,
       index: true,
     },
     views: {
@@ -149,6 +152,19 @@ const adSchema = new Schema<AdDocument>(
       type: Boolean,
       default: false,
       index: true,
+    },
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
+    resubmittedAt: {
+      type: Date,
+      default: null,
+    },
+    previousStatus: {
+      type: String,
+      enum: Object.values(AD_STATUS),
+      default: null,
     },
   },
   {

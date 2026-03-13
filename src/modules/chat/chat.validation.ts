@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const createConversationSchema = z.object({
-  sellerId: z.string(),
-  adId: z.string().optional(),
+  sellerId: z.string().min(1, 'Seller ID is required'),
+  adId: z.string().min(1, 'Ad ID is required'), // Now required for marketplace conversations
 });
 
 export const sendMessageSchema = z.object({
@@ -16,7 +16,7 @@ export const listConversationsQuerySchema = z.object({
 
 export const listMessagesQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(50),
+  limit: z.coerce.number().min(1).max(100).default(20),
 });
 
 export type CreateConversationDto = z.infer<typeof createConversationSchema>;

@@ -61,6 +61,7 @@ interface ListAdsOptions extends ListAdsQueryDto {
   ownerId?: string;
   status?: string;
   hasVideo?: boolean;
+  hasMedia?: boolean; // New: filter for ads with video OR images
 }
 
 export const list = async (options: ListAdsOptions): Promise<{ ads: AdDocument[]; total: number }> => {
@@ -78,6 +79,7 @@ export const list = async (options: ListAdsOptions): Promise<{ ads: AdDocument[]
     ownerId,
     status,
     hasVideo,
+    hasMedia,
   } = options;
 
   const filter: Record<string, unknown> = {};
@@ -114,6 +116,14 @@ export const list = async (options: ListAdsOptions): Promise<{ ads: AdDocument[]
 
   if (hasVideo) {
     filter.videoUrl = { $ne: null };
+  }
+
+  // Filter for ads with video OR images (for reels section)
+  if (hasMedia) {
+    filter.$or = [
+      { videoUrl: { $ne: null } }, // Has video
+      { photoUrls: { $exists: true, $ne: [], $not: { $size: 0 } } } // Has at least one image
+    ];
   }
 
   // Location-based filtering (simple distance calculation)

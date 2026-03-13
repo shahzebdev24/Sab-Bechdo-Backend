@@ -34,9 +34,29 @@ export const updateAd = async (id: string, ownerId: string, data: UpdateAdDto): 
     throw new NotFoundError('Ad not found or you do not have permission to update it');
   }
 
-  const updatedAd = await adsRepository.update(id, data);
+  // If ad was rejected and user is editing, change status to pending (resubmission)
+  const updateData: any = { ...data };
+  if (ad.status === 'rejected') {
+    updateData.status = 'pending';
+    updateData.previousStatus = 'rejected';
+    updateData.resubmittedAt = new Date();
+    // Keep rejection reason for admin reference
+  }
+
+  const updatedAd = await adsRepository.update(id, updateData);
   if (!updatedAd) {
     throw new NotFoundError('Ad not found');
+  }
+
+  // If resubmitted, notify user
+  if (ad.status === 'rejected') {
+    await notificationsService.createNotification(
+      ownerId,
+      'ad_status',
+      'Ad Resubmitted',
+      `Your ad "${updatedAd.title}" has been resubmitted for review.`,
+      { adId: updatedAd._id.toString(), status: 'pending', action: 'resubmitted' }
+    );
   }
 
   return updatedAd;
@@ -122,7 +142,13 @@ export const listReelsAds = async (
   query: Omit<ListAdsQueryDto, 'sort'>,
   userId?: string
 ): Promise<{ ads: AdResponse[]; total: number; page: number; limit: number; totalPages: number }> => {
-  const { ads, total } = await adsRepository.list({ ...query, hasVideo: true, sort: 'recent' });
+  // Fetch ads that have either video OR images (for reels section) - only show active ads
+  const { ads, total } = await adsRepository.list({ 
+    ...query, 
+    hasMedia: true, // Changed from hasVideo to hasMedia to include both videos and images
+    status: 'active', // Only show active ads in reels
+    sort: 'recent' 
+  });
 
   // Check wishlist status for each ad if user is logged in
   let wishlistAdIds: Set<string> = new Set();
@@ -178,4 +204,95 @@ export const listAdsBySeller = async (
     limit: query.limit || 20,
     totalPages: Math.ceil(total / (query.limit || 20)),
   };
+};
+
+/**
+ * Admin: List all ads (including pending and rejected)
+ */
+export const listAllAdsAdmin = async (
+  query: ListAdsQueryDto
+): Promise<{ ads: AdResponse[]; total: number; page: number; limit: number; totalPages: number }> => {
+  // Admin can see all ads regardless of status
+  const { ads, total } = await adsRepository.list(query);
+
+  // Map ads to response format without wishlist check (admin view)
+  const mappedAds = ads.map((ad) => AdMapper.toResponse(ad, false));
+
+  return {
+    ads: mappedAds,
+    total,
+    page: query.page || 1,
+    limit: query.limit || 20,
+    totalPages: Math.ceil(total / (query.limit || 20)),
+  };
+};
+
+/**
+ * Admin: Approve ad (change status from pending to active)
+ */
+export const approveAd = async (id: string): Promise<AdDocument> => {
+  const ad = await adsRepository.findById(id);
+  if (!ad) {
+    throw new NotFoundError('Ad not found');
+  }
+
+  // Update status and clear rejection/resubmission data
+  const updatedAd = await adsRepository.update(id, {
+    status: 'active',
+    rejectionReason: null,
+    resubmittedAt: null,
+    previousStatus: ad.status,
+  });
+  
+  if (!updatedAd) {
+    throw new NotFoundError('Ad not found');
+  }
+
+  // Send notification to ad owner
+  await notificationsService.createNotification(
+    updatedAd.owner.toString(),
+    'ad_status',
+    'Ad Approved! 🎉',
+    `Your ad "${updatedAd.title}" has been approved and is now live!`,
+    { adId: updatedAd._id.toString(), status: 'active', action: 'approved' }
+  );
+
+  return updatedAd;
+};
+
+/**
+ * Admin: Reject ad (change status to rejected)
+ */
+export const rejectAd = async (id: string, reason?: string): Promise<AdDocument> => {
+  const ad = await adsRepository.findById(id);
+  if (!ad) {
+    throw new NotFoundError('Ad not found');
+  }
+
+  // Update status and save rejection reason
+  const updatedAd = await adsRepository.update(id, {
+    status: 'rejected',
+    rejectionReason: reason || 'Does not meet our guidelines',
+    resubmittedAt: null, // Clear resubmission date
+    previousStatus: ad.status,
+  });
+  
+  if (!updatedAd) {
+    throw new NotFoundError('Ad not found');
+  }
+
+  // Send notification to ad owner with rejection reason
+  const message = reason
+    ? `Your ad "${updatedAd.title}" was rejected. Reason: ${reason}`
+    : `Your ad "${updatedAd.title}" was rejected. Please review our guidelines and try again.`;
+
+  await notificationsService.createNotification(
+    updatedAd.owner.toString(),
+    'ad_status',
+    'Ad Rejected',
+    message,
+    { adId: updatedAd._id.toString(), status: 'rejected', action: 'rejected', reason }
+  );
+
+  return updatedAd;
 };

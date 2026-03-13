@@ -57,7 +57,7 @@ export const updateAdSchema = z.object({
 });
 
 export const updateAdStatusSchema = z.object({
-  status: z.enum([AD_STATUS.ACTIVE, AD_STATUS.PENDING, AD_STATUS.SOLD, AD_STATUS.ARCHIVED]),
+  status: z.enum([AD_STATUS.ACTIVE, AD_STATUS.PENDING, AD_STATUS.SOLD, AD_STATUS.ARCHIVED, AD_STATUS.REJECTED]),
 });
 
 export const listAdsQuerySchema = z.object({

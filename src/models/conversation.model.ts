@@ -4,7 +4,7 @@ export interface IConversation {
   participants: mongoose.Types.ObjectId[];
   buyer: mongoose.Types.ObjectId;
   seller: mongoose.Types.ObjectId;
-  ad?: mongoose.Types.ObjectId;
+  ad: mongoose.Types.ObjectId; // Required - every conversation is about a specific ad
   lastMessage?: string;
   lastMessageAt?: Date;
   unreadCounts: Map<string, number>;
@@ -41,7 +41,8 @@ const conversationSchema = new Schema<ConversationDocument>(
     ad: {
       type: Schema.Types.ObjectId,
       ref: 'Ad',
-      default: null,
+      required: true, // Required for marketplace conversations
+      index: true,
     },
     lastMessage: {
       type: String,

@@ -67,3 +67,22 @@ export const deleteById = async (notificationId: string): Promise<boolean> => {
   const result = await Notification.findByIdAndDelete(notificationId);
   return result !== null;
 };
+
+/**
+ * Delete notification by type and data (for like/unlike behavior)
+ * This removes notifications when user unlikes something
+ */
+export const deleteByTypeAndData = async (
+  userId: string,
+  type: NotificationType,
+  data: Record<string, unknown>
+): Promise<number> => {
+  const result = await Notification.deleteMany({
+    user: new mongoose.Types.ObjectId(userId),
+    type,
+    'data.adId': data.adId,
+    'data.userId': data.userId,
+    'data.action': data.action,
+  });
+  return result.deletedCount;
+};

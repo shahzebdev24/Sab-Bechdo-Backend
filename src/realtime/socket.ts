@@ -59,14 +59,29 @@ export const initializeSocketIO = (httpServer: HttpServer): Server => {
       try {
         const { conversationId } = data;
         
+        if (!conversationId) {
+          socket.emit('error', { message: 'Conversation ID is required' });
+          return;
+        }
+        
         // Verify user is participant
-        await chatService.getConversation(conversationId, userId);
+        const conversation = await chatService.getConversation(conversationId, userId);
+        
+        if (!conversation) {
+          socket.emit('error', { message: 'Conversation not found' });
+          return;
+        }
         
         socket.join(`conversation:${conversationId}`);
-        logger.info(`User ${userId} joined conversation ${conversationId}`);
+        logger.info(
+          { userId, conversationId, adId: conversation.ad?.toString() },
+          'User joined conversation'
+        );
       } catch (error) {
         logger.error({ error: error instanceof Error ? error.message : 'Unknown error' }, 'Error joining conversation');
-        socket.emit('error', { message: 'Failed to join conversation' });
+        socket.emit('error', { 
+          message: error instanceof Error ? error.message : 'Failed to join conversation' 
+        });
       }
     });
 
@@ -80,8 +95,23 @@ export const initializeSocketIO = (httpServer: HttpServer): Server => {
       try {
         const { conversationId, body } = data;
 
+        // Validate message body
+        if (!body || body.trim().length === 0) {
+          socket.emit('error', { message: 'Message body cannot be empty' });
+          return;
+        }
+
+        if (body.length > 2000) {
+          socket.emit('error', { message: 'Message is too long (max 2000 characters)' });
+          return;
+        }
+
         // Save message
-        const message = await chatService.sendMessage(conversationId, userId, body);
+        const message = await chatService.sendMessage(conversationId, userId, body.trim());
+
+        // Populate message with sender/receiver info
+        await message.populate('sender', 'name avatarUrl username');
+        await message.populate('receiver', 'name avatarUrl username');
 
         // Broadcast to conversation room
         io.to(`conversation:${conversationId}`).emit('message:new', {
@@ -96,12 +126,19 @@ export const initializeSocketIO = (httpServer: HttpServer): Server => {
           ?.toString();
 
         if (receiverId) {
+          // Get ad info for notification context
+          const adTitle = conversation.ad ? (conversation.ad as any).title : 'an item';
+          
           const notification = await notificationsService.createNotification(
             receiverId,
             'chat',
             'New message',
-            body.substring(0, 100),
-            { conversationId, senderId: userId }
+            `New message about ${adTitle}: ${body.substring(0, 100)}`,
+            { 
+              conversationId, 
+              senderId: userId,
+              adId: conversation.ad ? conversation.ad.toString() : undefined,
+            }
           );
 
           // Send notification to receiver (only if notification was created)
@@ -110,23 +147,34 @@ export const initializeSocketIO = (httpServer: HttpServer): Server => {
           }
         }
 
-        logger.info(`Message sent in conversation ${conversationId}`);
+        logger.info(
+          { conversationId, senderId: userId, messageLength: body.length },
+          'Message sent successfully'
+        );
       } catch (error) {
         logger.error({ error: error instanceof Error ? error.message : 'Unknown error' }, 'Error sending message');
-        socket.emit('error', { message: 'Failed to send message' });
+        socket.emit('error', { 
+          message: error instanceof Error ? error.message : 'Failed to send message' 
+        });
       }
     });
 
     socket.on('message:read', async (data: { conversationId: string }) => {
       try {
         const { conversationId } = data;
-        await chatService.markAsRead(conversationId, userId);
+        const result = await chatService.markAsRead(conversationId, userId);
 
-        // Notify other participant
+        // Notify other participant that messages were read
         socket.to(`conversation:${conversationId}`).emit('messages:read', {
           conversationId,
           userId,
+          count: result.count,
         });
+
+        logger.info(
+          { conversationId, userId, count: result.count },
+          'Messages marked as read'
+        );
       } catch (error) {
         logger.error({ error: error instanceof Error ? error.message : 'Unknown error' }, 'Error marking messages as read');
       }
@@ -144,5 +192,12 @@ export const initializeSocketIO = (httpServer: HttpServer): Server => {
 export const emitNotification = (userId: string, notification: unknown): void => {
   if (ioInstance) {
     ioInstance.to(`user:${userId}`).emit('notification:new', notification);
+  }
+};
+
+// Helper function to emit notification removal (for like/unlike behavior)
+export const emitNotificationRemoval = (userId: string, data: { type: string; adId?: string; userId?: string; action?: string }): void => {
+  if (ioInstance) {
+    ioInstance.to(`user:${userId}`).emit('notification:removed', data);
   }
 };

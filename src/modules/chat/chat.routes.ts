@@ -48,4 +48,10 @@ router.post(
   chatController.markAsRead
 );
 
+router.get(
+  '/unread-counts',
+  authenticate,
+  chatController.getUnreadCounts
+);
+
 export default router;

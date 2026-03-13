@@ -68,7 +68,9 @@ export const listMessages = async (
     }
     const userId = req.user!.userId;
     const query: ListMessagesQueryDto = req.query as unknown as ListMessagesQueryDto;
+    
     const result = await chatService.listMessages(id, userId, query);
+    
     sendSuccess(res, result);
   } catch (error) {
     next(error);
@@ -88,6 +90,20 @@ export const markAsRead = async (
     const userId = req.user!.userId;
     const result = await chatService.markAsRead(id, userId);
     sendSuccess(res, result, 'Messages marked as read');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUnreadCounts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const counts = await chatService.getUnreadCounts(userId);
+    sendSuccess(res, { counts });
   } catch (error) {
     next(error);
   }

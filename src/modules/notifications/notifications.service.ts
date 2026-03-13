@@ -2,7 +2,7 @@ import * as notificationsRepository from './notifications.repository.js';
 import { NotificationDocument, NotificationType } from '@models/notification.model.js';
 import { ListNotificationsQueryDto, MarkAsReadDto } from './notifications.validation.js';
 import { User } from '@models/user.model.js';
-import { emitNotification } from '../../realtime/socket.js';
+import { emitNotification, emitNotificationRemoval } from '../../realtime/socket.js';
 
 export const createNotification = async (
   userId: string,
@@ -89,4 +89,26 @@ export const markAllAsRead = async (userId: string): Promise<{ count: number }> 
 export const getUnreadCount = async (userId: string): Promise<{ count: number }> => {
   const count = await notificationsRepository.countUnread(userId);
   return { count };
+};
+
+/**
+ * Remove notification by action (for like/unlike behavior)
+ * This ensures that if a user likes then unlikes, the notification is removed
+ */
+export const removeNotificationByAction = async (
+  userId: string,
+  type: NotificationType,
+  data: Record<string, unknown>
+): Promise<void> => {
+  const deletedCount = await notificationsRepository.deleteByTypeAndData(userId, type, data);
+  
+  // Emit real-time notification removal via Socket.IO if any notifications were deleted
+  if (deletedCount > 0) {
+    emitNotificationRemoval(userId, {
+      type,
+      adId: data.adId as string,
+      userId: data.userId as string,
+      action: data.action as string,
+    });
+  }
 };

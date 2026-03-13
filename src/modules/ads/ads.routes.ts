@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as adsController from './ads.controller.js';
 import { authenticate, optionalAuthenticate } from '@middleware/auth.js';
+import { requireAdmin } from '@middleware/admin.js';
 import { validateBody, validateQuery, validateParams } from '@middleware/validation.js';
 import {
   createAdSchema,
@@ -11,6 +12,11 @@ import {
 import { z } from 'zod';
 
 const router = Router();
+
+// Admin routes - must come first to avoid conflicts
+router.get('/admin/all', authenticate, requireAdmin, validateQuery(listAdsQuerySchema), adsController.listAllAdsAdmin);
+router.post('/:id/approve', authenticate, requireAdmin, validateParams(z.object({ id: z.string() })), adsController.approveAd);
+router.post('/:id/reject', authenticate, requireAdmin, validateParams(z.object({ id: z.string() })), validateBody(z.object({ reason: z.string().optional() })), adsController.rejectAd);
 
 // Public routes with optional authentication (for personalized isFavorite field)
 router.get('/', optionalAuthenticate, validateQuery(listAdsQuerySchema), adsController.listAds);

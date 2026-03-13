@@ -8,7 +8,7 @@ import * as notificationsService from '@modules/notifications/notifications.serv
 import { User } from '@models/user.model.js';
 
 // Likes
-export const likeAd = async (userId: string, adId: string): Promise<{ liked: boolean }> => {
+export const likeAd = async (userId: string, adId: string): Promise<{ liked: boolean; likesCount: number }> => {
   const ad = await adsRepository.findById(adId);
   if (!ad) {
     throw new NotFoundError('Ad not found');
@@ -16,22 +16,59 @@ export const likeAd = async (userId: string, adId: string): Promise<{ liked: boo
 
   const existingLike = await engagementRepository.findLike(userId, adId);
   if (existingLike) {
-    return { liked: true }; // Already liked, idempotent
+    // Already liked, return current count
+    const count = await engagementRepository.countLikesByAd(adId);
+    return { liked: true, likesCount: count };
   }
 
   await engagementRepository.createLike(userId, adId);
   await engagementRepository.incrementAdLikes(adId);
+  
+  // Get updated count
+  const count = await engagementRepository.countLikesByAd(adId);
 
-  // Notification will be created by notifications service
-  return { liked: true };
+  // Create notification for ad owner (if not liking own ad)
+  // Note: Notification will only persist if user keeps the like
+  // If they unlike quickly, the notification should be removed
+  const adOwnerId = ad.owner._id?.toString() || ad.owner.toString();
+  if (adOwnerId !== userId) {
+    const liker = await User.findById(userId).select('name');
+    await notificationsService.createNotification(
+      adOwnerId,
+      'like',
+      'New Like',
+      `${liker?.name || 'Someone'} liked your ad "${ad.title}"`,
+      { adId, userId, action: 'like' }
+    );
+  }
+
+  return { liked: true, likesCount: count };
 };
 
-export const unlikeAd = async (userId: string, adId: string): Promise<{ unliked: boolean }> => {
+export const unlikeAd = async (userId: string, adId: string): Promise<{ unliked: boolean; likesCount: number }> => {
   const deleted = await engagementRepository.deleteLike(userId, adId);
   if (deleted) {
     await engagementRepository.decrementAdLikes(adId);
+    
+    // Remove the like notification if it exists
+    // This ensures that if user likes then unlikes, the notification disappears
+    const ad = await adsRepository.findById(adId);
+    if (ad) {
+      const adOwnerId = ad.owner._id?.toString() || ad.owner.toString();
+      if (adOwnerId !== userId) {
+        await notificationsService.removeNotificationByAction(
+          adOwnerId,
+          'like',
+          { adId, userId, action: 'like' }
+        );
+      }
+    }
   }
-  return { unliked: deleted };
+  
+  // Get updated count
+  const count = await engagementRepository.countLikesByAd(adId);
+  
+  return { unliked: deleted, likesCount: count };
 };
 
 export const getLikeCount = async (adId: string): Promise<{ count: number }> => {
@@ -39,9 +76,16 @@ export const getLikeCount = async (adId: string): Promise<{ count: number }> => 
   return { count };
 };
 
-export const checkIfLiked = async (userId: string, adId: string): Promise<{ isLiked: boolean }> => {
-  const like = await engagementRepository.findLike(userId, adId);
-  return { isLiked: like !== null };
+export const checkIfLiked = async (userId: string, adId: string): Promise<{ isLiked: boolean; likesCount: number }> => {
+  const [like, count] = await Promise.all([
+    engagementRepository.findLike(userId, adId),
+    engagementRepository.countLikesByAd(adId)
+  ]);
+  
+  return { 
+    isLiked: like !== null,
+    likesCount: count
+  };
 };
 
 // Comments
@@ -77,6 +121,23 @@ export const createComment = async (
   );
 
   await engagementRepository.incrementAdComments(adId);
+
+  // Create notification for ad owner (if not commenting on own ad)
+  const adOwnerId = ad.owner._id?.toString() || ad.owner.toString();
+  if (adOwnerId !== userId) {
+    const commenter = await User.findById(userId).select('name');
+    const commentPreview = sanitizedText.length > 50 
+      ? sanitizedText.substring(0, 50) + '...' 
+      : sanitizedText;
+    
+    await notificationsService.createNotification(
+      adOwnerId,
+      'comment',
+      'New Comment',
+      `${commenter?.name || 'Someone'} commented: "${commentPreview}"`,
+      { adId, commentId: comment._id.toString(), userId }
+    );
+  }
 
   return comment;
 };
@@ -134,6 +195,17 @@ export const followUser = async (
   }
 
   await engagementRepository.createFollow(followerId, followedId);
+  
+  // Create notification for the followed user
+  const follower = await User.findById(followerId).select('name');
+  await notificationsService.createNotification(
+    followedId,
+    'follow',
+    'New Follower',
+    `${follower?.name || 'Someone'} started following you`,
+    { userId: followerId }
+  );
+  
   return { followed: true };
 };
 

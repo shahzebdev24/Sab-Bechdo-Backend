@@ -62,6 +62,7 @@ export const AD_STATUS = {
   PENDING: 'pending',
   SOLD: 'sold',
   ARCHIVED: 'archived',
+  REJECTED: 'rejected',
 } as const;
 
 export const MEDIA_CONSTANTS = {
