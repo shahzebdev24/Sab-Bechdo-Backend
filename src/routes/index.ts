@@ -9,6 +9,8 @@ import engagementRoutes from '@modules/engagement/engagement.routes.js';
 import notificationsRoutes from '@modules/notifications/notifications.routes.js';
 import chatRoutes from '@modules/chat/chat.routes.js';
 import offersRoutes from '@modules/offers/offers.routes.js';
+import adminRoutes from '@modules/admin/admin.routes.js';
+import categoriesRoutes from '@modules/categories/categories.routes.js';
 import healthRoutes from '../health/health.routes.js';
 
 const router = Router();
@@ -23,6 +25,8 @@ router.use('/engagement', engagementRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/chat', chatRoutes);
 router.use('/offers', offersRoutes);
+router.use('/admin', adminRoutes);
+router.use('/categories', categoriesRoutes);
 router.use('/', healthRoutes);
 
 export default router;

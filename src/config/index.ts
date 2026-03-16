@@ -30,7 +30,7 @@ const configSchema = z.object({
   frontendUrl: z.string().url(),
   
   cors: z.object({
-    origin: z.string().default('*'),
+    origin: z.union([z.string(), z.array(z.string())]).default('*'),
   }),
   
   rateLimit: z.object({
@@ -82,7 +82,9 @@ function loadConfig(): Config {
     frontendUrl: process.env.FRONTEND_URL,
     
     cors: {
-      origin: process.env.CORS_ORIGIN,
+      origin: process.env.CORS_ORIGIN?.includes(',')
+        ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+        : process.env.CORS_ORIGIN,
     },
     
     rateLimit: {

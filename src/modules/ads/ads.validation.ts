@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AD_CATEGORIES, AD_CONDITIONS, AD_STATUS } from '@common/constants.js';
+import { AD_CONDITIONS, AD_STATUS } from '@common/constants.js';
 
 const locationSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -13,18 +13,7 @@ export const createAdSchema = z.object({
   description: z.string().min(10).max(2000),
   price: z.number().min(0),
   currency: z.string().default('PKR'),
-  category: z.enum([
-    AD_CATEGORIES.ELECTRONICS,
-    AD_CATEGORIES.VEHICLES,
-    AD_CATEGORIES.PROPERTY,
-    AD_CATEGORIES.FASHION,
-    AD_CATEGORIES.HOME_GARDEN,
-    AD_CATEGORIES.SPORTS,
-    AD_CATEGORIES.BOOKS,
-    AD_CATEGORIES.PETS,
-    AD_CATEGORIES.SERVICES,
-    AD_CATEGORIES.OTHER,
-  ]),
+  category: z.string().min(1, 'Category is required'),
   condition: z.enum([AD_CONDITIONS.NEW, AD_CONDITIONS.USED]),
   photoUrls: z.array(z.string().url()).max(5),
   videoUrl: z.string().url().optional(),
@@ -36,20 +25,7 @@ export const updateAdSchema = z.object({
   description: z.string().min(10).max(2000).optional(),
   price: z.number().min(0).optional(),
   currency: z.string().optional(),
-  category: z
-    .enum([
-      AD_CATEGORIES.ELECTRONICS,
-      AD_CATEGORIES.VEHICLES,
-      AD_CATEGORIES.PROPERTY,
-      AD_CATEGORIES.FASHION,
-      AD_CATEGORIES.HOME_GARDEN,
-      AD_CATEGORIES.SPORTS,
-      AD_CATEGORIES.BOOKS,
-      AD_CATEGORIES.PETS,
-      AD_CATEGORIES.SERVICES,
-      AD_CATEGORIES.OTHER,
-    ])
-    .optional(),
+  category: z.string().min(1).optional(),
   condition: z.enum([AD_CONDITIONS.NEW, AD_CONDITIONS.USED]).optional(),
   photoUrls: z.array(z.string().url()).max(5).optional(),
   videoUrl: z.string().url().optional(),
@@ -61,20 +37,7 @@ export const updateAdStatusSchema = z.object({
 });
 
 export const listAdsQuerySchema = z.object({
-  category: z
-    .enum([
-      AD_CATEGORIES.ELECTRONICS,
-      AD_CATEGORIES.VEHICLES,
-      AD_CATEGORIES.PROPERTY,
-      AD_CATEGORIES.FASHION,
-      AD_CATEGORIES.HOME_GARDEN,
-      AD_CATEGORIES.SPORTS,
-      AD_CATEGORIES.BOOKS,
-      AD_CATEGORIES.PETS,
-      AD_CATEGORIES.SERVICES,
-      AD_CATEGORIES.OTHER,
-    ])
-    .optional(),
+  category: z.string().optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
   lat: z.coerce.number().min(-90).max(90).optional(),

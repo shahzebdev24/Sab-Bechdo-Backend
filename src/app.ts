@@ -4,7 +4,6 @@ import cors from 'cors';
 import { config } from '@config/index.js';
 import { requestLogger } from '@middleware/request-logger.js';
 import { errorHandler } from '@middleware/error-handler.js';
-import { generalLimiter } from '@middleware/rate-limit.js';
 import routes from './routes/index.js';
 
 export const createApp = (): Application => {

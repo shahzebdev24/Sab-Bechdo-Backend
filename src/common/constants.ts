@@ -73,6 +73,12 @@ export const MEDIA_CONSTANTS = {
   MAX_FILES_PER_UPLOAD: 10,
 } as const;
 
+export const DASHBOARD_CONSTANTS = {
+  ACTIVE_USER_DAYS_THRESHOLD: 30, // Users active in last 30 days
+  DEFAULT_DATE_RANGE_DAYS: 7, // Default date range for stats
+  CACHE_TTL_SECONDS: 300, // Cache dashboard stats for 5 minutes
+} as const;
+
 export type AuthProvider = (typeof AUTH_PROVIDERS)[keyof typeof AUTH_PROVIDERS];
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 export type AdCategory = (typeof AD_CATEGORIES)[keyof typeof AD_CATEGORIES];

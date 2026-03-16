@@ -92,8 +92,8 @@ const adSchema = new Schema<AdDocument>(
     },
     category: {
       type: String,
-      enum: Object.values(AD_CATEGORIES),
       required: true,
+      index: true,
     },
     condition: {
       type: String,

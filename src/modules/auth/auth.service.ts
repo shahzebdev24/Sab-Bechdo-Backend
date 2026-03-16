@@ -92,6 +92,9 @@ export const login = async (data: LoginDto): Promise<{ user: UserResponse; token
   const tokens = generateAuthTokens(user._id.toString(), user.email, user.role);
   
   await authRepository.saveRefreshToken(user._id.toString(), tokens.refreshToken);
+  
+  // Update last login timestamp
+  await authRepository.updateLastLogin(user._id.toString());
 
   return {
     user: mapToUserResponse(user),

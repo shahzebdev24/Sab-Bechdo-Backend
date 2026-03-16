@@ -125,3 +125,9 @@ export const updatePasswordAndLinkLocal = async (
     { new: true }
   ).exec();
 };
+
+export const updateLastLogin = async (userId: string): Promise<void> => {
+  await User.findByIdAndUpdate(userId, {
+    lastLoginAt: new Date(),
+  }).exec();
+};

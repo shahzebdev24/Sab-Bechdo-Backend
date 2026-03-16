@@ -1,12 +1,24 @@
 import * as adsRepository from './ads.repository.js';
 import { CreateAdDto, UpdateAdDto, UpdateAdStatusDto, ListAdsQueryDto } from './ads.validation.js';
-import { NotFoundError } from '@core/errors/app-error.js';
+import { NotFoundError, ValidationError } from '@core/errors/app-error.js';
 import { AdDocument } from '@models/ad.model.js';
 import { AdMapper, AdResponse } from '@common/mappers/ad.mapper.js';
 import * as notificationsService from '@modules/notifications/notifications.service.js';
+import { Category } from '@models/category.model.js';
 
 export const createAd = async (data: CreateAdDto, ownerId: string): Promise<AdDocument> => {
-  return await adsRepository.create({ ...data, owner: ownerId });
+  // Validate category exists and is active
+  const category = await Category.findOne({ name: data.category, isActive: true });
+  if (!category) {
+    throw new ValidationError('Invalid or inactive category');
+  }
+  
+  const ad = await adsRepository.create({ ...data, owner: ownerId });
+  
+  // Increment category itemCount
+  await Category.findByIdAndUpdate(category._id, { $inc: { itemCount: 1 } });
+  
+  return ad;
 };
 
 export const getAdById = async (id: string, incrementView = false, userId?: string): Promise<AdResponse> => {
@@ -34,6 +46,16 @@ export const updateAd = async (id: string, ownerId: string, data: UpdateAdDto): 
     throw new NotFoundError('Ad not found or you do not have permission to update it');
   }
 
+  // Validate category if being updated
+  let oldCategory: string | undefined;
+  if (data.category && data.category !== ad.category) {
+    const category = await Category.findOne({ name: data.category, isActive: true });
+    if (!category) {
+      throw new ValidationError('Invalid or inactive category');
+    }
+    oldCategory = ad.category;
+  }
+
   // If ad was rejected and user is editing, change status to pending (resubmission)
   const updateData: any = { ...data };
   if (ad.status === 'rejected') {
@@ -46,6 +68,14 @@ export const updateAd = async (id: string, ownerId: string, data: UpdateAdDto): 
   const updatedAd = await adsRepository.update(id, updateData);
   if (!updatedAd) {
     throw new NotFoundError('Ad not found');
+  }
+
+  // Update category counts if category changed
+  if (oldCategory && data.category) {
+    // Decrement old category
+    await Category.findOneAndUpdate({ name: oldCategory }, { $inc: { itemCount: -1 } });
+    // Increment new category
+    await Category.findOneAndUpdate({ name: data.category }, { $inc: { itemCount: 1 } });
   }
 
   // If resubmitted, notify user
@@ -108,6 +138,9 @@ export const deleteAd = async (id: string, ownerId: string): Promise<void> => {
   if (!deleted) {
     throw new NotFoundError('Ad not found');
   }
+
+  // Decrement category itemCount
+  await Category.findOneAndUpdate({ name: ad.category }, { $inc: { itemCount: -1 } });
 };
 
 export const listAds = async (
@@ -236,17 +269,19 @@ export const approveAd = async (id: string): Promise<AdDocument> => {
     throw new NotFoundError('Ad not found');
   }
 
-  // Update status and clear rejection/resubmission data
-  const updatedAd = await adsRepository.update(id, {
-    status: 'active',
-    rejectionReason: null,
-    resubmittedAt: null,
-    previousStatus: ad.status,
-  });
+  // Update status to active
+  const updatedAd = await adsRepository.updateStatus(id, 'active');
   
   if (!updatedAd) {
     throw new NotFoundError('Ad not found');
   }
+
+  // Clear rejection/resubmission data separately
+  await adsRepository.update(id, {
+    rejectionReason: null,
+    resubmittedAt: null,
+    previousStatus: ad.status,
+  } as any);
 
   // Send notification to ad owner
   await notificationsService.createNotification(
@@ -269,17 +304,19 @@ export const rejectAd = async (id: string, reason?: string): Promise<AdDocument>
     throw new NotFoundError('Ad not found');
   }
 
-  // Update status and save rejection reason
-  const updatedAd = await adsRepository.update(id, {
-    status: 'rejected',
-    rejectionReason: reason || 'Does not meet our guidelines',
-    resubmittedAt: null, // Clear resubmission date
-    previousStatus: ad.status,
-  });
+  // Update status to rejected
+  const updatedAd = await adsRepository.updateStatus(id, 'rejected');
   
   if (!updatedAd) {
     throw new NotFoundError('Ad not found');
   }
+
+  // Save rejection reason and clear resubmission data separately
+  await adsRepository.update(id, {
+    rejectionReason: reason || 'Does not meet our guidelines',
+    resubmittedAt: null,
+    previousStatus: ad.status,
+  } as any);
 
   // Send notification to ad owner with rejection reason
   const message = reason

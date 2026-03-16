@@ -26,6 +26,7 @@ export interface IUser {
   refreshToken?: string; // Store current active refresh token
   isEmailVerified: boolean;
   isActive: boolean;
+  lastLoginAt?: Date; // Track last login time for activity metrics
   // Profile fields
   avatarUrl?: string;
   username?: string;
@@ -143,6 +144,10 @@ const userSchema = new Schema<UserDocument>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
     },
     avatarUrl: {
       type: String,
