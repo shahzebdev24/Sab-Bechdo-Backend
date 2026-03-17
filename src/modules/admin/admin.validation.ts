@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// ============================================
+// DASHBOARD VALIDATION SCHEMAS
+// ============================================
+
 /**
  * Dashboard Statistics Query Schema
  * Validates query parameters for dashboard stats endpoint
@@ -8,8 +12,6 @@ export const dashboardStatsQuerySchema = z.object({
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
 });
-
-export type DashboardStatsQueryDto = z.infer<typeof dashboardStatsQuerySchema>;
 
 // ============================================
 // USER MANAGEMENT VALIDATION SCHEMAS
@@ -55,3 +57,28 @@ export const updateUserBodySchema = z.object({
 export const userIdParamSchema = z.object({
   id: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid user ID'),
 });
+
+// ============================================
+// EXPORTED DTOS
+// ============================================
+
+export type DashboardStatsQueryDto = z.infer<typeof dashboardStatsQuerySchema>;
+export type GetUsersQueryDto = z.infer<typeof getUsersQuerySchema>;
+export type CreateUserBodyDto = z.infer<typeof createUserBodySchema>;
+export type UpdateUserBodyDto = z.infer<typeof updateUserBodySchema>;
+export type UserIdParamDto = z.infer<typeof userIdParamSchema>;
+
+// ============================================
+// NOTIFICATIONS VALIDATION SCHEMAS
+// ============================================
+
+/**
+ * Send system notification body schema
+ */
+export const sendSystemNotificationSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(100, 'Title must not exceed 100 characters'),
+  body: z.string().min(1, 'Body is required').max(500, 'Body must not exceed 500 characters'),
+  data: z.record(z.unknown()).optional(),
+});
+
+export type SendSystemNotificationDto = z.infer<typeof sendSystemNotificationSchema>;

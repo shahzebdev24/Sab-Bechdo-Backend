@@ -1,26 +1,10 @@
 import * as categoriesRepository from './categories.repository.js';
 import { ConflictError, NotFoundError, BadRequestError } from '@core/errors/app-error.js';
-
-export interface GetCategoriesListParams {
-  search?: string;
-  status?: 'active' | 'inactive' | 'all';
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  page?: number;
-  limit?: number;
-}
-
-export interface CreateCategoryData {
-  name: string;
-  description?: string;
-  icon?: string;
-}
-
-export interface UpdateCategoryData {
-  name?: string;
-  description?: string;
-  icon?: string;
-}
+import { 
+  GetCategoriesListQueryDto, 
+  CreateCategoryDto, 
+  UpdateCategoryDto 
+} from './categories.validation.js';
 
 /**
  * Transform MongoDB document to API response format
@@ -39,7 +23,7 @@ const transformCategory = (doc: any) => {
 /**
  * Get categories list with filters (admin)
  */
-export const getCategoriesList = async (params: GetCategoriesListParams) => {
+export const getCategoriesList = async (params: GetCategoriesListQueryDto) => {
   const {
     search,
     status,
@@ -110,7 +94,7 @@ export const getCategoryById = async (categoryId: string) => {
 /**
  * Create new category
  */
-export const createCategory = async (data: CreateCategoryData) => {
+export const createCategory = async (data: CreateCategoryDto) => {
   // Check if name already exists
   const nameExists = await categoriesRepository.checkCategoryNameExists(data.name);
   if (nameExists) {
@@ -126,7 +110,7 @@ export const createCategory = async (data: CreateCategoryData) => {
 /**
  * Update category
  */
-export const updateCategory = async (categoryId: string, data: UpdateCategoryData) => {
+export const updateCategory = async (categoryId: string, data: UpdateCategoryDto) => {
   // Check if category exists
   const existingCategory = await categoriesRepository.getCategoryById(categoryId);
   if (!existingCategory) {

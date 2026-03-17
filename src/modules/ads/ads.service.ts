@@ -18,6 +18,14 @@ export const createAd = async (data: CreateAdDto, ownerId: string): Promise<AdDo
   // Increment category itemCount
   await Category.findByIdAndUpdate(category._id, { $inc: { itemCount: 1 } });
   
+  // Notify all admins about new ad upload
+  await notificationsService.notifyAllAdmins(
+    'new_ad_upload',
+    'New Ad Uploaded',
+    `A new ad "${ad.title}" has been uploaded in ${ad.category} category.`,
+    { adId: ad._id.toString(), adTitle: ad.title, category: ad.category, ownerId }
+  );
+  
   return ad;
 };
 

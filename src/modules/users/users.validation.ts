@@ -29,6 +29,8 @@ export const updatePreferencesSchema = z.object({
       comments: z.boolean().optional(),
       follows: z.boolean().optional(),
       system: z.boolean().optional(),
+      newUserRegistration: z.boolean().optional(), // Admin-only notification
+      newAdUpload: z.boolean().optional(), // Admin-only notification
     })
     .optional(),
   theme: z.enum(['light', 'dark', 'system']).optional(),

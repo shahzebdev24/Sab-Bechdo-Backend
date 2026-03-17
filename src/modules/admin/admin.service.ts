@@ -1,6 +1,23 @@
+// ============================================
+// IMPORTS
+// ============================================
+
 import * as adminRepository from './admin.repository.js';
-import { AD_STATUS, DASHBOARD_CONSTANTS } from '@common/constants.js';
-import { DashboardStatsQueryDto } from './admin.validation.js';
+import * as authRepository from '../auth/auth.repository.js';
+import * as notificationsService from '@modules/notifications/notifications.service.js';
+import { hashPassword } from '@core/auth/password.js';
+import { ConflictError, NotFoundError, BadRequestError } from '@core/errors/app-error.js';
+import { AD_STATUS, DASHBOARD_CONSTANTS, AUTH_PROVIDERS } from '@common/constants.js';
+import { 
+  DashboardStatsQueryDto, 
+  GetUsersQueryDto, 
+  CreateUserBodyDto, 
+  UpdateUserBodyDto 
+} from './admin.validation.js';
+
+// ============================================
+// INTERFACES
+// ============================================
 
 /**
  * Dashboard Statistics Response Interface
@@ -23,6 +40,10 @@ export interface DashboardStats {
   };
 }
 
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
 /**
  * Calculate growth percentage
  */
@@ -30,6 +51,10 @@ const calculateGrowth = (current: number, previous: number): number => {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Number((((current - previous) / previous) * 100).toFixed(2));
 };
+
+// ============================================
+// DASHBOARD SERVICE METHODS
+// ============================================
 
 /**
  * Get dashboard statistics
@@ -108,40 +133,10 @@ export const getDashboardStats = async (query: DashboardStatsQueryDto): Promise<
 // USER MANAGEMENT SERVICE METHODS
 // ============================================
 
-import { hashPassword } from '@core/auth/password.js';
-import { ConflictError, NotFoundError, BadRequestError } from '@core/errors/app-error.js';
-import { AUTH_PROVIDERS } from '@common/constants.js';
-import * as authRepository from '../auth/auth.repository.js';
-
-export interface GetUsersListParams {
-  search?: string;
-  status?: 'active' | 'inactive' | 'blocked' | 'all';
-  role?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  page?: number;
-  limit?: number;
-}
-
-export interface CreateUserData {
-  email: string;
-  name: string;
-  password: string;
-  role: 'customer' | 'admin';
-  phone?: string;
-}
-
-export interface UpdateUserData {
-  name?: string;
-  email?: string;
-  role?: 'customer' | 'admin';
-  phone?: string;
-}
-
 /**
  * Get users list with filters
  */
-export const getUsersList = async (params: GetUsersListParams) => {
+export const getUsersList = async (params: GetUsersQueryDto) => {
   const {
     search,
     status,
@@ -232,7 +227,7 @@ export const getUserById = async (userId: string) => {
 /**
  * Create new user (admin)
  */
-export const createUser = async (data: CreateUserData) => {
+export const createUser = async (data: CreateUserBodyDto) => {
   // Check if email already exists
   const emailExists = await adminRepository.checkEmailExists(data.email);
   if (emailExists) {
@@ -263,7 +258,7 @@ export const createUser = async (data: CreateUserData) => {
 /**
  * Update user (admin)
  */
-export const updateUser = async (userId: string, data: UpdateUserData) => {
+export const updateUser = async (userId: string, data: UpdateUserBodyDto) => {
   // Check if user exists
   const existingUser = await adminRepository.getUserById(userId);
   if (!existingUser) {
@@ -366,4 +361,19 @@ export const unblockUser = async (userId: string) => {
     ...unblockedUser.toObject(),
     status,
   };
+};
+
+// ============================================
+// NOTIFICATIONS SERVICE METHODS
+// ============================================
+
+/**
+ * Send system notification to all admins
+ */
+export const sendSystemNotification = async (
+  title: string,
+  body: string,
+  data: Record<string, unknown>
+): Promise<void> => {
+  await notificationsService.notifyAllAdmins('system', title, body, data);
 };

@@ -64,6 +64,8 @@ export const getPreferences = async (userId: string) => {
       comments: user.preferences?.notifications?.comments ?? true,
       follows: user.preferences?.notifications?.follows ?? true,
       system: user.preferences?.notifications?.system ?? true,
+      newUserRegistration: user.preferences?.notifications?.newUserRegistration ?? false, // Admin-only, default false
+      newAdUpload: user.preferences?.notifications?.newAdUpload ?? false, // Admin-only, default false
     },
     theme: user.preferences?.theme ?? 'system',
     language: user.preferences?.language ?? 'en',
@@ -79,6 +81,8 @@ export const updatePreferences = async (
       comments: boolean;
       follows: boolean;
       system: boolean;
+      newUserRegistration: boolean; // Admin-only
+      newAdUpload: boolean; // Admin-only
     }>;
     theme: 'light' | 'dark' | 'system';
     language: string;
@@ -103,6 +107,8 @@ export const updatePreferences = async (
       comments: updatedUser.preferences?.notifications?.comments ?? true,
       follows: updatedUser.preferences?.notifications?.follows ?? true,
       system: updatedUser.preferences?.notifications?.system ?? true,
+      newUserRegistration: updatedUser.preferences?.notifications?.newUserRegistration ?? false, // Admin-only
+      newAdUpload: updatedUser.preferences?.notifications?.newAdUpload ?? false, // Admin-only
     },
     theme: updatedUser.preferences?.theme ?? 'system',
     language: updatedUser.preferences?.language ?? 'en',

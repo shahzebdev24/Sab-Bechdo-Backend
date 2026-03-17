@@ -41,6 +41,8 @@ export interface IUser {
       comments: boolean;
       follows: boolean;
       system: boolean;
+      newUserRegistration: boolean; // Admin-only: notifications for new user registrations
+      newAdUpload: boolean; // Admin-only: notifications for new ad uploads
     };
     theme: 'light' | 'dark' | 'system';
     language: string;
@@ -182,6 +184,8 @@ const userSchema = new Schema<UserDocument>(
             comments: { type: Boolean, default: true },
             follows: { type: Boolean, default: true },
             system: { type: Boolean, default: true },
+            newUserRegistration: { type: Boolean, default: false }, // Admin-only, default false
+            newAdUpload: { type: Boolean, default: false }, // Admin-only, default false
           },
           default: {},
         },

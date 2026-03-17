@@ -9,6 +9,7 @@ import {
   createUserBodySchema,
   updateUserBodySchema,
   userIdParamSchema,
+  sendSystemNotificationSchema,
 } from './admin.validation.js';
 
 const router = Router();
@@ -85,6 +86,20 @@ router.patch(
   requireAdmin,
   validateParams(userIdParamSchema),
   adminController.unblockUser
+);
+
+/**
+ * Admin Notifications Routes
+ * All routes require authentication and admin role
+ */
+
+// POST /api/v1/admin/notifications/system - Send system notification to all admins
+router.post(
+  '/notifications/system',
+  authenticate,
+  requireAdmin,
+  validateBody(sendSystemNotificationSchema),
+  adminController.sendSystemNotification
 );
 
 export default router;

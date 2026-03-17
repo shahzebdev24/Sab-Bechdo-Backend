@@ -93,12 +93,12 @@ export const getAdsCountBeforeDate = async (date: Date): Promise<number> => {
 // USER MANAGEMENT REPOSITORY METHODS
 // ============================================
 
-export interface GetUsersFilters {
+interface GetUsersFilters {
   search?: string;
   status?: 'active' | 'inactive' | 'blocked';
   role?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
   page: number;
   limit: number;
 }

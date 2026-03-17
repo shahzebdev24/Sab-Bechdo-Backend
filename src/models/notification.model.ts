@@ -8,6 +8,8 @@ export const NOTIFICATION_TYPES = {
   SYSTEM: 'system',
   OFFER: 'offer',
   AD_STATUS: 'ad_status',
+  NEW_USER_REGISTRATION: 'new_user_registration', // Admin-only
+  NEW_AD_UPLOAD: 'new_ad_upload', // Admin-only
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];

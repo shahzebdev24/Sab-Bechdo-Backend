@@ -26,6 +26,8 @@ export const createNotification = async (
     offer: 'system',
     system: 'system',
     ad_status: 'system',
+    new_user_registration: 'newUserRegistration', // Admin-only
+    new_ad_upload: 'newAdUpload', // Admin-only
   };
 
   const preferenceKey = preferenceMap[type];
@@ -110,5 +112,47 @@ export const removeNotificationByAction = async (
       userId: data.userId as string,
       action: data.action as string,
     });
+  }
+};
+
+/**
+ * Notify all admins with a specific notification
+ * Used for admin-only notifications like new user registration or new ad upload
+ */
+export const notifyAllAdmins = async (
+  type: NotificationType,
+  title: string,
+  body: string,
+  data: Record<string, unknown> = {}
+): Promise<void> => {
+  // Find all admin users who have this notification type enabled
+  const admins = await User.find({ role: 'admin' }).select('_id preferences');
+  
+  // Map notification types to preference keys
+  const preferenceMap: Record<string, keyof typeof admins[0]['preferences']['notifications']> = {
+    new_user_registration: 'newUserRegistration',
+    new_ad_upload: 'newAdUpload',
+    system: 'system',
+  };
+
+  const preferenceKey = preferenceMap[type];
+
+  // Create notifications for each admin who has this type enabled
+  for (const admin of admins) {
+    // Check if admin has this notification type enabled
+    if (preferenceKey && admin.preferences?.notifications?.[preferenceKey] !== false) {
+      const notification = await notificationsRepository.create(
+        admin._id.toString(),
+        type,
+        title,
+        body,
+        data
+      );
+
+      // Emit real-time notification via Socket.IO
+      if (notification) {
+        emitNotification(admin._id.toString(), notification);
+      }
+    }
   }
 };

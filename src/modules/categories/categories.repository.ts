@@ -1,7 +1,7 @@
 import { Category, CategoryDocument } from '@models/category.model.js';
 import { FilterQuery } from 'mongoose';
 
-export interface GetCategoriesFilters {
+interface GetCategoriesFilters {
   search?: string;
   isActive?: boolean;
   sortBy?: string;

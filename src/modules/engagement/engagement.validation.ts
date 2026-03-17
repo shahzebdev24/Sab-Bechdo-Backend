@@ -30,3 +30,5 @@ export const listFollowsQuerySchema = z.object({
 export type CreateCommentDto = z.infer<typeof createCommentSchema>;
 export type ListCommentsQueryDto = z.infer<typeof listCommentsQuerySchema>;
 export type ListFollowsQueryDto = z.infer<typeof listFollowsQuerySchema>;
+export type LikeAdDto = z.infer<typeof likeAdSchema>;
+export type FollowUserDto = z.infer<typeof followUserSchema>;

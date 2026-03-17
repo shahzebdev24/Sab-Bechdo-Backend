@@ -189,9 +189,15 @@ export const initializeSocketIO = (httpServer: HttpServer): Server => {
 };
 
 // Helper function to emit notifications (can be called from services)
-export const emitNotification = (userId: string, notification: unknown): void => {
+export const emitNotification = (userId: string, notification: any): void => {
   if (ioInstance) {
+    // Emit generic notification event
     ioInstance.to(`user:${userId}`).emit('notification:new', notification);
+    
+    // Also emit type-specific event for better filtering on frontend
+    if (notification.type) {
+      ioInstance.to(`user:${userId}`).emit(`notification:${notification.type}`, notification);
+    }
   }
 };
 

@@ -129,3 +129,26 @@ export const unblockUser = async (
     next(error);
   }
 };
+
+// ============================================
+// NOTIFICATIONS CONTROLLER METHODS
+// ============================================
+
+/**
+ * Send system notification to all admins
+ * @route POST /api/v1/admin/notifications/system
+ * @access Private (Admin only)
+ */
+export const sendSystemNotification = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { title, body, data } = req.body;
+    await adminService.sendSystemNotification(title, body, data || {});
+    sendSuccess(res, { sent: true }, 'System notification sent to all admins', 201);
+  } catch (error) {
+    next(error);
+  }
+};

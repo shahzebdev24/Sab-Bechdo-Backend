@@ -13,6 +13,7 @@ import { AuthError, ConflictError, NotFoundError } from '@core/errors/app-error.
 import { AuthTokens, UserResponse } from '@core/types/index.js';
 import { UserDocument } from '@models/user.model.js';
 import { sendPasswordResetEmail } from '@common/services/email.service.js';
+import * as notificationsService from '@modules/notifications/notifications.service.js';
 import { AUTH_CONSTANTS, AUTH_PROVIDERS } from '@common/constants.js';
 import { generateRandomToken } from '@common/utils.js';
 import { UserMapper } from '@common/mappers/user.mapper.js';
@@ -71,6 +72,14 @@ export const signup = async (data: SignupDto): Promise<{ user: UserResponse; tok
   const tokens = generateAuthTokens(user._id.toString(), user.email, user.role);
   
   await authRepository.saveRefreshToken(user._id.toString(), tokens.refreshToken);
+
+  // Notify all admins about new user registration
+  await notificationsService.notifyAllAdmins(
+    'new_user_registration',
+    'New User Registered',
+    `${user.name} (${user.email}) has registered on the platform.`,
+    { userId: user._id.toString(), userName: user.name, userEmail: user.email }
+  );
 
   return {
     user: mapToUserResponse(user),
