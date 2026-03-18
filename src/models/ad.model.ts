@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import {
-  AD_CATEGORIES,
   AD_CONDITIONS,
   AD_STATUS,
   AdCategory,
