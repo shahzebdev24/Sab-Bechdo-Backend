@@ -47,6 +47,7 @@ export const listAdsQuerySchema = z.object({
   sort: z.enum(['recent', 'price_asc', 'price_desc', 'views']).default('recent'),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
+  videoOnly: z.coerce.boolean().optional(),
 });
 
 export type CreateAdDto = z.infer<typeof createAdSchema>;

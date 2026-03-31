@@ -1,7 +1,7 @@
 import * as usersRepository from './users.repository.js';
 import * as adsRepository from '../ads/ads.repository.js';
 import * as reviewsRepository from '../reviews/reviews.repository.js';
-import { UpdateProfileDto } from './users.validation.js';
+import { UpdateProfileDto, TopSellerResponse } from './users.validation.js';
 import { NotFoundError, ConflictError } from '@core/errors/app-error.js';
 import { UserDocument } from '@models/user.model.js';
 import { AD_STATUS } from '@common/constants.js';
@@ -113,6 +113,30 @@ export const updatePreferences = async (
     theme: updatedUser.preferences?.theme ?? 'system',
     language: updatedUser.preferences?.language ?? 'en',
   };
+};
+
+export const getTopSellers = async (limit: number): Promise<TopSellerResponse[]> => {
+  const topSellerData = await adsRepository.getTopSellers(limit);
+  if (topSellerData.length === 0) return [];
+
+  const userIds = topSellerData.map((s) => s._id.toString());
+  const users = await usersRepository.findByIds(userIds);
+
+  const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+  return topSellerData.reduce<TopSellerResponse[]>((acc, seller) => {
+    const user = userMap.get(seller._id.toString());
+    if (!user) return acc;
+    acc.push({
+      id: user._id.toString(),
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      location: user.location?.city || user.location?.region || user.location?.country,
+      activeAdsCount: seller.activeAdsCount,
+      totalViews: seller.totalViews,
+    });
+    return acc;
+  }, []);
 };
 
 export const getSellerProfile = async (sellerId: string): Promise<SellerProfileResponse> => {

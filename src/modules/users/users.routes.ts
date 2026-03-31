@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import * as usersController from './users.controller.js';
 import { authenticate } from '@middleware/auth.js';
-import { validateBody, validateParams } from '@middleware/validation.js';
-import { updateProfileSchema, updatePreferencesSchema } from './users.validation.js';
+import { validateBody, validateParams, validateQuery } from '@middleware/validation.js';
+import { updateProfileSchema, updatePreferencesSchema, topSellersQuerySchema } from './users.validation.js';
 import { z } from 'zod';
 
 const router = Router();
@@ -19,6 +19,7 @@ router.patch(
 );
 
 // Public routes
+router.get('/top-sellers', validateQuery(topSellersQuerySchema), usersController.getTopSellers);
 router.get('/:id', validateParams(z.object({ id: z.string() })), usersController.getSellerProfile);
 
 export default router;

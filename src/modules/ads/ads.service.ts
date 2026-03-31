@@ -183,12 +183,12 @@ export const listReelsAds = async (
   query: Omit<ListAdsQueryDto, 'sort'>,
   userId?: string
 ): Promise<{ ads: AdResponse[]; total: number; page: number; limit: number; totalPages: number }> => {
-  // Fetch ads that have either video OR images (for reels section) - only show active ads
-  const { ads, total } = await adsRepository.list({ 
-    ...query, 
-    hasMedia: true, // Changed from hasVideo to hasMedia to include both videos and images
-    status: 'active', // Only show active ads in reels
-    sort: 'recent' 
+  // videoOnly=true → sirf videos (banner ke liye), default → photos + videos (reels page ke liye)
+  const { ads, total } = await adsRepository.list({
+    ...query,
+    ...(query.videoOnly ? { hasVideo: true } : { hasMedia: true }),
+    status: 'active',
+    sort: 'recent',
   });
 
   // Check wishlist status for each ad if user is logged in

@@ -37,5 +37,19 @@ export const updatePreferencesSchema = z.object({
   language: z.string().optional(),
 });
 
+export const topSellersQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(20).default(4),
+});
+
+export interface TopSellerResponse {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  location?: string;
+  activeAdsCount: number;
+  totalViews: number;
+}
+
 export type UpdateProfileDto = z.infer<typeof updateProfileSchema>;
 export type UpdatePreferencesDto = z.infer<typeof updatePreferencesSchema>;
+export type TopSellersQueryDto = z.infer<typeof topSellersQuerySchema>;

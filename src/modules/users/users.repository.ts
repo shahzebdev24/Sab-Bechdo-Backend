@@ -39,3 +39,7 @@ export const updatePreferences = async (
 export const findByIdPublic = async (id: string): Promise<UserDocument | null> => {
   return await User.findById(id).select('name email avatarUrl username createdAt');
 };
+
+export const findByIds = async (ids: string[]): Promise<UserDocument[]> => {
+  return await User.find({ _id: { $in: ids } }).select('name avatarUrl username location');
+};

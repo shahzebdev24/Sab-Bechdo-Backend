@@ -1,5 +1,6 @@
 import { Ad, AdDocument } from '@models/ad.model.js';
 import { CreateAdDto, UpdateAdDto, ListAdsQueryDto } from './ads.validation.js';
+import { AD_STATUS } from '@common/constants.js';
 import mongoose from 'mongoose';
 
 export const create = async (data: CreateAdDto & { owner: string }): Promise<AdDocument> => {
@@ -167,6 +168,33 @@ export const countByOwner = async (ownerId: string, status?: string): Promise<nu
   return await Ad.countDocuments(filter);
 };
 
+
+export interface TopSellerAggregateResult {
+  _id: mongoose.Types.ObjectId;
+  activeAdsCount: number;
+  totalViews: number;
+  score: number;
+}
+
+export const getTopSellers = async (limit: number): Promise<TopSellerAggregateResult[]> => {
+  return await Ad.aggregate([
+    { $match: { status: AD_STATUS.ACTIVE, isDeleted: false } },
+    {
+      $group: {
+        _id: '$owner',
+        activeAdsCount: { $sum: 1 },
+        totalViews: { $sum: '$views' },
+      },
+    },
+    {
+      $addFields: {
+        score: { $add: ['$totalViews', { $multiply: ['$activeAdsCount', 100] }] },
+      },
+    },
+    { $sort: { score: -1 } },
+    { $limit: limit },
+  ]);
+};
 
 export const isInWishlist = async (userId: string, adId: string): Promise<boolean> => {
   const { User } = await import('@models/index.js');

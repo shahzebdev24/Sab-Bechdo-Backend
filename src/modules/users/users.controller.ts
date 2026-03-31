@@ -62,6 +62,20 @@ export const updatePreferences = async (
   }
 };
 
+export const getTopSellers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const limit = Number(req.query.limit) || 4;
+    const sellers = await usersService.getTopSellers(limit);
+    sendSuccess(res, sellers);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getSellerProfile = async (
   req: Request,
   res: Response,
