@@ -22,6 +22,12 @@ router.post('/:id/reject', authenticate, requireAdmin, validateParams(z.object({
 router.get('/', optionalAuthenticate, validateQuery(listAdsQuerySchema), adsController.listAds);
 router.get('/reels', optionalAuthenticate, validateQuery(listAdsQuerySchema), adsController.listReelsAds);
 router.get(
+  '/reels/:id',
+  optionalAuthenticate,
+  validateParams(z.object({ id: z.string() })),
+  adsController.getReelById
+);
+router.get(
   '/seller/:sellerId',
   optionalAuthenticate,
   validateParams(z.object({ sellerId: z.string() })),

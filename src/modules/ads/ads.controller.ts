@@ -7,6 +7,7 @@ import {
   UpdateAdDto,
   UpdateAdStatusDto,
   ListAdsQueryDto,
+  listAdsQuerySchema,
 } from './ads.validation.js';
 
 export const createAd = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -84,10 +85,28 @@ export const deleteAd = async (req: Request, res: Response, next: NextFunction):
 
 export const listAds = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const query: ListAdsQueryDto = req.query as unknown as ListAdsQueryDto;
+    const query: ListAdsQueryDto = listAdsQuerySchema.parse(req.query);
     const userId = req.user?.userId; // Optional - works for both authenticated and guest users
     const result = await adsService.listAds(query, userId);
     sendSuccess(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getReelById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    if (typeof id !== 'string') {
+      throw new BadRequestError('Invalid reel ID');
+    }
+    const userId = req.user?.userId;
+    const reel = await adsService.getReelById(id, userId);
+    sendSuccess(res, reel);
   } catch (error) {
     next(error);
   }
@@ -99,7 +118,7 @@ export const listReelsAds = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const query = req.query as unknown as Omit<ListAdsQueryDto, 'sort'>;
+    const query = listAdsQuerySchema.parse(req.query);
     const userId = req.user?.userId; // Optional - works for both authenticated and guest users
     const result = await adsService.listReelsAds(query, userId);
     sendSuccess(res, result);
@@ -118,7 +137,7 @@ export const listAdsBySeller = async (
     if (typeof sellerId !== 'string') {
       throw new BadRequestError('Invalid seller ID');
     }
-    const query = req.query as unknown as Pick<ListAdsQueryDto, 'page' | 'limit' | 'sort'>;
+    const query = listAdsQuerySchema.pick({ page: true, limit: true, sort: true }).parse(req.query);
     const requesterId = req.user?.userId;
     const result = await adsService.listAdsBySeller(sellerId, query, requesterId);
     sendSuccess(res, result);
@@ -134,7 +153,7 @@ export const listMyAds = async (
 ): Promise<void> => {
   try {
     const ownerId = req.user!.userId;
-    const query = req.query as unknown as Pick<ListAdsQueryDto, 'page' | 'limit' | 'sort'>;
+    const query = listAdsQuerySchema.pick({ page: true, limit: true, sort: true }).parse(req.query);
     const result = await adsService.listAdsBySeller(ownerId, query, ownerId);
     sendSuccess(res, result);
   } catch (error) {
@@ -151,7 +170,7 @@ export const listAllAdsAdmin = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const query: ListAdsQueryDto = req.query as unknown as ListAdsQueryDto;
+    const query: ListAdsQueryDto = listAdsQuerySchema.parse(req.query);
     const result = await adsService.listAllAdsAdmin(query);
     sendSuccess(res, result);
   } catch (error) {

@@ -7,8 +7,8 @@ import * as notificationsService from '@modules/notifications/notifications.serv
 import { Category } from '@models/category.model.js';
 
 export const createAd = async (data: CreateAdDto, ownerId: string): Promise<AdDocument> => {
-  // Validate category exists and is active
-  const category = await Category.findOne({ name: data.category, isActive: true });
+  // Validate category exists and is active (case-insensitive match)
+  const category = await Category.findOne({ name: new RegExp(`^${data.category}$`, 'i'), isActive: true });
   if (!category) {
     throw new ValidationError('Invalid or inactive category');
   }
@@ -57,7 +57,7 @@ export const updateAd = async (id: string, ownerId: string, data: UpdateAdDto): 
   // Validate category if being updated
   let oldCategory: string | undefined;
   if (data.category && data.category !== ad.category) {
-    const category = await Category.findOne({ name: data.category, isActive: true });
+    const category = await Category.findOne({ name: new RegExp(`^${data.category}$`, 'i'), isActive: true });
     if (!category) {
       throw new ValidationError('Invalid or inactive category');
     }
@@ -170,17 +170,47 @@ export const listAds = async (
     return AdMapper.toResponse(ad, isFavorite);
   });
 
+  const page = query.page || 1;
+  const limit = query.limit || 20;
+  const totalPages = Math.ceil(total / limit);
+
   return {
     ads: mappedAds,
     total,
-    page: query.page || 1,
-    limit: query.limit || 20,
-    totalPages: Math.ceil(total / (query.limit || 20)),
+    page,
+    limit,
+    totalPages,
   };
 };
 
+export const getReelById = async (id: string, userId?: string): Promise<AdResponse> => {
+  const ad = await adsRepository.findById(id);
+
+  if (!ad) {
+    throw new NotFoundError('Reel not found');
+  }
+
+  // Only active ads are accessible as reels
+  if (ad.status !== 'active') {
+    throw new NotFoundError('Reel not found');
+  }
+
+  // Must have media (video or photos) to be a reel
+  const hasMedia = !!ad.videoUrl || (ad.photoUrls && ad.photoUrls.length > 0);
+  if (!hasMedia) {
+    throw new NotFoundError('Reel not found');
+  }
+
+  let isFavorite = false;
+  if (userId) {
+    isFavorite = await adsRepository.isInWishlist(userId, id);
+  }
+
+  return AdMapper.toResponse(ad, isFavorite);
+};
+
 export const listReelsAds = async (
-  query: Omit<ListAdsQueryDto, 'sort'>,
+  query: ListAdsQueryDto,
   userId?: string
 ): Promise<{ ads: AdResponse[]; total: number; page: number; limit: number; totalPages: number }> => {
   // videoOnly=true → sirf videos (banner ke liye), default → photos + videos (reels page ke liye)
@@ -188,7 +218,6 @@ export const listReelsAds = async (
     ...query,
     ...(query.videoOnly ? { hasVideo: true } : { hasMedia: true }),
     status: 'active',
-    sort: 'recent',
   });
 
   // Check wishlist status for each ad if user is logged in
@@ -203,12 +232,16 @@ export const listReelsAds = async (
     return AdMapper.toResponse(ad, isFavorite);
   });
 
+  const page = query.page || 1;
+  const limit = query.limit || 20;
+  const totalPages = Math.ceil(total / limit);
+
   return {
     ads: mappedAds,
     total,
-    page: query.page || 1,
-    limit: query.limit || 20,
-    totalPages: Math.ceil(total / (query.limit || 20)),
+    page,
+    limit,
+    totalPages,
   };
 };
 

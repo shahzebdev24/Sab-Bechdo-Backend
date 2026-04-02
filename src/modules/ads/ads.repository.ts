@@ -98,7 +98,7 @@ export const list = async (options: ListAdsOptions): Promise<{ ads: AdDocument[]
   }
 
   if (category) {
-    filter.category = category;
+    filter.category = { $regex: new RegExp(`^${category}$`, 'i') };
   }
 
   if (minPrice !== undefined || maxPrice !== undefined) {

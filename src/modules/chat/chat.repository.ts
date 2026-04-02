@@ -2,7 +2,8 @@ import { Conversation, ConversationDocument } from '@models/conversation.model.j
 import { Message, MessageDocument } from '@models/message.model.js';
 import mongoose from 'mongoose';
 
-// Conversations
+// ── Ad-based conversations ───────────────────────────────────────────────────
+
 export const createConversation = async (
   buyerId: string,
   sellerId: string,
@@ -13,10 +14,7 @@ export const createConversation = async (
     buyer: new mongoose.Types.ObjectId(buyerId),
     seller: new mongoose.Types.ObjectId(sellerId),
     ad: new mongoose.Types.ObjectId(adId),
-    unreadCounts: new Map([
-      [buyerId, 0],
-      [sellerId, 0],
-    ]),
+    unreadCounts: new Map([[buyerId, 0], [sellerId, 0]]),
   });
   return await conversation.save();
 };
@@ -35,6 +33,44 @@ export const findConversation = async (
     .populate('seller', 'name avatarUrl username')
     .populate('ad', 'title photoUrls price status currency condition');
 };
+
+// ── General conversations (no ad context — direct message from user profile) ─
+
+export const findGeneralConversation = async (
+  userAId: string,
+  userBId: string
+): Promise<ConversationDocument | null> => {
+  return await Conversation.findOne({
+    participants: {
+      $all: [
+        new mongoose.Types.ObjectId(userAId),
+        new mongoose.Types.ObjectId(userBId),
+      ],
+    },
+    ad: null,
+  })
+    .populate('buyer', 'name avatarUrl username')
+    .populate('seller', 'name avatarUrl username');
+};
+
+export const createGeneralConversation = async (
+  initiatorId: string,
+  otherUserId: string
+): Promise<ConversationDocument> => {
+  const conversation = new Conversation({
+    participants: [
+      new mongoose.Types.ObjectId(initiatorId),
+      new mongoose.Types.ObjectId(otherUserId),
+    ],
+    buyer: new mongoose.Types.ObjectId(initiatorId),
+    seller: new mongoose.Types.ObjectId(otherUserId),
+    ad: null,
+    unreadCounts: new Map([[initiatorId, 0], [otherUserId, 0]]),
+  });
+  return await conversation.save();
+};
+
+// ── Shared ───────────────────────────────────────────────────────────────────
 
 export const findConversationById = async (id: string): Promise<ConversationDocument | null> => {
   return await Conversation.findById(id)
@@ -75,7 +111,6 @@ export const updateConversation = async (
   conversation.lastMessage = lastMessage;
   conversation.lastMessageAt = new Date();
 
-  // Increment unread count for receiver
   const currentCount = conversation.unreadCounts.get(receiverId) || 0;
   conversation.unreadCounts.set(receiverId, currentCount + 1);
 
@@ -91,7 +126,8 @@ export const markConversationAsRead = async (
   });
 };
 
-// Messages
+// ── Messages ─────────────────────────────────────────────────────────────────
+
 export const createMessage = async (
   conversationId: string,
   senderId: string,
@@ -103,7 +139,7 @@ export const createMessage = async (
     sender: new mongoose.Types.ObjectId(senderId),
     receiver: new mongoose.Types.ObjectId(receiverId),
     body,
-    deliveredAt: new Date(), // Mark as delivered immediately
+    deliveredAt: new Date(),
   });
   return await message.save();
 };
@@ -117,7 +153,7 @@ export const listMessages = async (
 
   const [messages, total] = await Promise.all([
     Message.find({ conversation: new mongoose.Types.ObjectId(conversationId) })
-      .sort({ createdAt: -1 }) // Descending: newest first
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate('sender', 'name avatarUrl username')
@@ -125,10 +161,6 @@ export const listMessages = async (
     Message.countDocuments({ conversation: new mongoose.Types.ObjectId(conversationId) }),
   ]);
 
-  // Return as is - newest first
-  // Page 1: Latest 20 messages
-  // Page 2: Next older 20 messages
-  // Page 3: Even older 20 messages
   return { messages, total };
 };
 

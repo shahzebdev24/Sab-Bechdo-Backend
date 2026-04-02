@@ -4,7 +4,7 @@ export interface IConversation {
   participants: mongoose.Types.ObjectId[];
   buyer: mongoose.Types.ObjectId;
   seller: mongoose.Types.ObjectId;
-  ad: mongoose.Types.ObjectId; // Required - every conversation is about a specific ad
+  ad?: mongoose.Types.ObjectId; // Optional — null for general (profile-based) conversations
   lastMessage?: string;
   lastMessageAt?: Date;
   unreadCounts: Map<string, number>;
@@ -41,7 +41,8 @@ const conversationSchema = new Schema<ConversationDocument>(
     ad: {
       type: Schema.Types.ObjectId,
       ref: 'Ad',
-      required: true, // Required for marketplace conversations
+      required: false, // Optional — null for general (profile-based) conversations
+      default: null,
       index: true,
     },
     lastMessage: {
@@ -71,8 +72,8 @@ const conversationSchema = new Schema<ConversationDocument>(
   }
 );
 
-// Unique conversation per buyer-seller-ad combination
-conversationSchema.index({ buyer: 1, seller: 1, ad: 1 }, { unique: true });
+// Unique per buyer-seller-ad combination. Sparse allows multiple null-ad (general) conversations.
+conversationSchema.index({ buyer: 1, seller: 1, ad: 1 }, { unique: true, sparse: true });
 conversationSchema.index({ participants: 1 });
 conversationSchema.index({ lastMessageAt: -1 });
 

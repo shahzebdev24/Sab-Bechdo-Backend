@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const createConversationSchema = z.object({
   sellerId: z.string().min(1, 'Seller ID is required'),
-  adId: z.string().min(1, 'Ad ID is required'), // Now required for marketplace conversations
+  adId: z.string().optional(), // Optional — ad-based or general conversation
 });
 
 export const sendMessageSchema = z.object({
