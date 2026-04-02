@@ -22,45 +22,43 @@ export const createOrGetConversation = async (
     throw new BadRequestError('You cannot start a conversation with yourself');
   }
 
-  // Validate: Ad exists and is accessible
-  const ad = await Ad.findById(adId);
-  if (!ad) {
-    throw new NotFoundError('Ad not found');
-  }
-  if (ad.isDeleted) {
-    throw new BadRequestError('This ad is no longer available');
-  }
-
   // Validate: Seller exists
   const seller = await User.findById(sellerId);
   if (!seller) {
     throw new NotFoundError('Seller not found');
   }
 
-  // Validate: Seller owns the ad
-  if (ad.owner.toString() !== sellerId) {
-    throw new BadRequestError('The specified seller does not own this ad');
-  }
+  // ── Ad-based conversation ─────────────────────────────────────────────────
+  if (adId) {
+    const ad = await Ad.findById(adId);
+    if (!ad) throw new NotFoundError('Ad not found');
+    if (ad.isDeleted) throw new BadRequestError('This ad is no longer available');
 
-  // Try to find existing conversation for this buyer-seller-ad combination
-  let conversation = await chatRepository.findConversation(buyerId, sellerId, adId);
+    // Validate that the specified seller actually owns this ad
+    if (ad.owner.toString() !== sellerId) {
+      throw new BadRequestError('The specified seller does not own this ad');
+    }
 
-  if (conversation) {
-    logger.info(
-      { conversationId: conversation._id.toString(), buyerId, sellerId, adId },
-      'Existing conversation found'
-    );
+    let conversation = await chatRepository.findConversation(buyerId, sellerId, adId);
+    if (conversation) {
+      logger.info({ conversationId: conversation._id.toString(), buyerId, sellerId, adId }, 'Existing ad conversation found');
+      return conversation;
+    }
+
+    conversation = await chatRepository.createConversation(buyerId, sellerId, adId);
+    logger.info({ conversationId: conversation._id.toString(), buyerId, sellerId, adId }, 'New ad conversation created');
     return conversation;
   }
 
-  // Create new conversation
-  conversation = await chatRepository.createConversation(buyerId, sellerId, adId);
-  
-  logger.info(
-    { conversationId: conversation._id.toString(), buyerId, sellerId, adId },
-    'New conversation created'
-  );
+  // ── General conversation (no ad — initiated from user profile) ────────────
+  let conversation = await chatRepository.findGeneralConversation(buyerId, sellerId);
+  if (conversation) {
+    logger.info({ conversationId: conversation._id.toString(), buyerId, sellerId }, 'Existing general conversation found');
+    return conversation;
+  }
 
+  conversation = await chatRepository.createGeneralConversation(buyerId, sellerId);
+  logger.info({ conversationId: conversation._id.toString(), buyerId, sellerId }, 'New general conversation created');
   return conversation;
 };
 
